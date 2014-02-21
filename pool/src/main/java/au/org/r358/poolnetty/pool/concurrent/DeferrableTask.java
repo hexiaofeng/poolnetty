@@ -1,4 +1,4 @@
-package au.org.r358.pool.concurrent;
+package au.org.r358.poolnetty.pool.concurrent;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -39,6 +39,7 @@ public abstract class DeferrableTask<V> implements Runnable
         catch (Exception ex)
         {
             executionException = new ExecutionException(ex);
+            latch.countDown();
         }
     }
 

@@ -54,4 +54,4 @@ atlassian-ide-plugin.xml
 
 pool/build/*
 common/build/*
-
+.idea/*

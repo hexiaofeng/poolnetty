@@ -1,6 +1,6 @@
-package au.org.r358.pool;
+package au.org.r358.poolnetty.pool;
 
-import au.org.r358.pool.concurrent.DeferrableTask;
+import au.org.r358.poolnetty.pool.concurrent.DeferrableTask;
 import au.org.r358.poolnetty.common.*;
 import au.org.r358.poolnetty.common.exceptions.PoolProviderException;
 import io.netty.bootstrap.Bootstrap;

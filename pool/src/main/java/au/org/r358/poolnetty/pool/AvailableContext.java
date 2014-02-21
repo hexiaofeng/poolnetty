@@ -1,4 +1,4 @@
-package au.org.r358.pool;
+package au.org.r358.poolnetty.pool;
 
 import io.netty.channel.ChannelHandlerContext;
 
