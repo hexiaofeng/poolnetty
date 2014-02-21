@@ -1,0 +1,54 @@
+apply plugin: 'java'
+
+
+
+subprojects {
+    apply plugin: 'java'
+
+
+    repositories {
+        mavenCentral();
+        maven {
+            url 'http://repository.jboss.org/nexus/content/groups/public'
+        }
+    }
+
+    dependencies {
+        testCompile 'junit:junit:4.10'
+        compile 'joda-time:joda-time:2.1'
+        compile 'log4j:log4j:1.2.17'
+        compile 'io.netty:netty-all:4.0.11.Final'
+    }
+
+    version = '0.1'
+    group = 'au.r358'
+
+    jar {
+        manifest.attributes provider: 'gradle'
+    }
+}
+
+
+project(':common') {
+    dependencies {
+        compile 'io.netty:netty-all:4.0.11.Final'
+    }
+}
+
+
+project(':test') {
+    dependencies {
+        compile project(':common')
+        compile project(':pool')
+    }
+}
+
+project(':pool') {
+    dependencies {
+        compile project(':common')
+    }
+}
+
+
+
+
