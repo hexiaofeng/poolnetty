@@ -19,7 +19,7 @@
 
 package au.org.r358.poolnetty.common;
 
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.Channel;
 
 /**
  *
@@ -27,14 +27,16 @@ import io.netty.channel.ChannelHandlerContext;
 public class LeasedContext
 {
     private final long expireAfter;
-    private final ChannelHandlerContext channelHandlerContext;
-    private final boolean ephemeral;
+    private final Channel channelHandlerContext;
+    private final boolean immortal;
+    private final Object userObject;
 
-    public LeasedContext(long expireAfter, ChannelHandlerContext channelHandlerContext, boolean ephemeral)
+    public LeasedContext(long expireAfter, Channel channelHandlerContext, boolean ephemeral, Object userObject)
     {
         this.expireAfter = expireAfter;
         this.channelHandlerContext = channelHandlerContext;
-        this.ephemeral = ephemeral;
+        this.immortal = ephemeral;
+        this.userObject = userObject;
     }
 
     public long getExpireAfter()
@@ -42,13 +44,18 @@ public class LeasedContext
         return expireAfter;
     }
 
-    public boolean isEphemeral()
+    public boolean isImmortal()
     {
-        return ephemeral;
+        return immortal;
     }
 
-    public ChannelHandlerContext getChannelHandlerContext()
+    public Channel getChannelHandlerContext()
     {
         return channelHandlerContext;
+    }
+
+    public Object getUserObject()
+    {
+        return userObject;
     }
 }

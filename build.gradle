@@ -17,6 +17,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+
+
 apply plugin: 'java'
 
 buildscript {
@@ -107,7 +109,7 @@ project(':common') {
 }
 
 
-project(':test') {
+project(':intest') {
     dependencies {
         compile project(':common')
         compile project(':pool')

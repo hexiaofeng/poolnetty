@@ -17,10 +17,37 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+package au.org.r358.poolnetty.test.simpleserver;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.MessageToByteEncoder;
+
+/**
+ * Encodes strings to length defined byte messages.
+ */
+public class SimpleOutboundHandler extends MessageToByteEncoder<String>
+{
+
+    private final int id;
+
+    public SimpleOutboundHandler(int id)
+    {
+        this.id = id;
+    }
+
+    public SimpleOutboundHandler()
+    {
+        id = -1;
+    }
 
 
-include "common", "intest", "pool"
-
-
-
-
+    @Override
+    protected void encode(ChannelHandlerContext ctx, String msg, ByteBuf out)
+        throws Exception
+    {
+        byte[] b = msg.getBytes(SimpleServer.UTF_8);
+        out.writeInt(b.length);
+        out.writeBytes(b);
+    }
+}

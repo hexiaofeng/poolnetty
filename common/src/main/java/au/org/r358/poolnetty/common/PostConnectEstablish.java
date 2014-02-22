@@ -17,10 +17,33 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+package au.org.r358.poolnetty.common;
+
+import io.netty.channel.Channel;
 
 
-include "common", "intest", "pool"
-
-
-
-
+/**
+ * Called once the connection is finished, that is after a connection is made and the pipeline is in place.
+ * <p/>
+ * At this point you can asynchronously do whatever needs to be done, like logging into a DB and so on.
+ * When complete, you need to put the completeTask on the pool providers decoupler thread.
+ * Example:
+ * <code>
+ * provider.execute(completeTask)
+ * </code>
+ */
+public interface PostConnectEstablish
+{
+    /**
+     * This is your notification to perform any completion required for the connection, at this point the pipeline has already been established.
+     * This phase can be used to do things like "log into a db" etc.
+     * <p/>
+     * This method is called on the pools decoupler and it is advisable for you to complete this phase asynchronously.
+     * When you are complete, place the Runnable from completeTask onto the pool providers decoupler.
+     *
+     * @param ctx
+     * @param provider
+     * @param completeTask
+     */
+    void establish(Channel ctx, PoolProvider provider, Runnable completeTask);
+}

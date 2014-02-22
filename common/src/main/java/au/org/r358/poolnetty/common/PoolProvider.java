@@ -20,9 +20,8 @@
 package au.org.r358.poolnetty.common;
 
 import au.org.r358.poolnetty.common.exceptions.PoolProviderException;
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.Channel;
 
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -40,7 +39,7 @@ public interface PoolProvider
      * @return The context.
      * @throws Exception
      */
-    ChannelHandlerContext lease(long leaseTime, TimeUnit units)
+    Channel lease(int leaseTime, TimeUnit units, Object userObject)
         throws PoolProviderException;
 
     /**
@@ -49,11 +48,32 @@ public interface PoolProvider
      * @param ctx The context to release.
      * @throws PoolProviderException if the context is unknown to the pool or declared lost to the pool because lease time expired.
      */
-    void yield(ChannelHandlerContext ctx)
+    void yield(Channel ctx)
         throws PoolProviderException;
 
-    void Start(CountDownLatch latch)
+    void start()
         throws Exception;
 
-    void Stop(boolean force, CountDownLatch latch);
+    void stop(boolean force);
+
+    /**
+     * execute the runnable on the pools decoupler thread.
+     *
+     * @param runnable The runnable.
+     */
+    void execute(Runnable runnable);
+
+    /**
+     * Add listener.
+     *
+     * @param listener The listener to add.
+     */
+    void addListener(PoolProviderListener listener);
+
+    /**
+     * Remove listener.
+     *
+     * @param listener The listener.
+     */
+    void removeListener(PoolProviderListener listener);
 }

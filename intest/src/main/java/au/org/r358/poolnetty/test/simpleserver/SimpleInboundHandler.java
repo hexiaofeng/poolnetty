@@ -17,10 +17,50 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+package au.org.r358.poolnetty.test.simpleserver;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.ByteToMessageDecoder;
 
-include "common", "intest", "pool"
+import java.util.List;
 
+/**
+ * Reads length encoded bytes and when available converts them back to a string.
+ */
+public class SimpleInboundHandler extends ByteToMessageDecoder
+{
 
+    private final int id;
 
+    public SimpleInboundHandler(int id)
+    {
+        this.id = id;
+    }
 
+    public SimpleInboundHandler()
+    {
+        id = -1;
+    }
+
+    @Override
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
+        throws Exception
+    {
+        if (in.readableBytes() > 4)
+        {
+            int len = in.readInt();
+            if (len > 65535)
+            {
+                throw new IllegalStateException("Too long: " + len);
+            }
+
+            if (in.readableBytes() >= len)
+            {
+                byte[] b = new byte[len];
+                in.readBytes(b);
+                out.add(new String(b, SimpleServer.UTF_8));
+            }
+        }
+    }
+}

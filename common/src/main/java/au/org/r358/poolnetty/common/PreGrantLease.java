@@ -19,7 +19,7 @@
 
 package au.org.r358.poolnetty.common;
 
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.Channel;
 
 /**
  * Intercept the lease granting process before the context is leased.
@@ -35,5 +35,5 @@ public interface PreGrantLease
      * @param provider The provider of the lease.
      * @return true to grant the lease, false to deny the lease.
      */
-    boolean continueToGrantLease(ChannelHandlerContext context, PoolProvider provider);
+    boolean continueToGrantLease(Channel context, PoolProvider provider);
 }

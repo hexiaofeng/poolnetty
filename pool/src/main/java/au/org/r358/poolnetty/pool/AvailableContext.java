@@ -19,7 +19,7 @@
 
 package au.org.r358.poolnetty.pool;
 
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.Channel;
 
 /**
  * A wrapper for the context.
@@ -28,11 +28,11 @@ import io.netty.channel.ChannelHandlerContext;
 public class AvailableContext
 {
     private final long closeAfter;
-    private final ChannelHandlerContext channelHandlerContext;
+    private final Channel channelHandlerContext;
     private final int lifespan;
     private final boolean immortal;
 
-    public AvailableContext(long closeAfter, ChannelHandlerContext channelHandlerContext, int lifespan, boolean immortal)
+    public AvailableContext(long closeAfter, Channel channelHandlerContext, int lifespan, boolean immortal)
     {
         this.closeAfter = closeAfter;
         this.channelHandlerContext = channelHandlerContext;
@@ -40,7 +40,7 @@ public class AvailableContext
         this.immortal = immortal;
     }
 
-    public ChannelHandlerContext getChannelHandlerContext()
+    public Channel getChannelHandlerContext()
     {
         return channelHandlerContext;
     }
@@ -60,5 +60,10 @@ public class AvailableContext
     public boolean isImmortal()
     {
         return immortal;
+    }
+
+    public int getLifespan()
+    {
+        return lifespan;
     }
 }

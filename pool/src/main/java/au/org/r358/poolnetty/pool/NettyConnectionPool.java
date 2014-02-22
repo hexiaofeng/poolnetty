@@ -19,9 +19,9 @@
 
 package au.org.r358.poolnetty.pool;
 
-import au.org.r358.poolnetty.pool.concurrent.DeferrableTask;
 import au.org.r358.poolnetty.common.*;
 import au.org.r358.poolnetty.common.exceptions.PoolProviderException;
+import au.org.r358.poolnetty.pool.concurrent.DeferrableTask;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 
@@ -39,11 +39,6 @@ public class NettyConnectionPool implements PoolProvider
      */
     private final Executor decoupler = Executors.newSingleThreadExecutor();
 
-    /**
-     * Lease timeout scheduler.
-     */
-    protected final ScheduledExecutorService timeoutScheduler = Executors.newSingleThreadScheduledExecutor();
-
     protected final ConnectionInfoProvider connectionInfoProvider;
     protected final ContextExceptionHandler contextExceptionHandler;
     protected final LeaseExpiredHandler leaseExpiredHandler;
@@ -52,6 +47,7 @@ public class NettyConnectionPool implements PoolProvider
     protected final BootstrapProvider bootstrapProvider;
     protected final PoolExceptionHandler poolExceptionHandler;
     protected final ExpiryHarvester expiryHarvester;
+    protected final PostConnectEstablish postConnectEstablish;
 
     protected final int immortalCount;
     protected final int maxEphemeralCount;
@@ -59,31 +55,39 @@ public class NettyConnectionPool implements PoolProvider
     protected final String inboundHandlerName;
     protected final int reaperInterval;
 
-    private final int totalContexts;
-    protected final Map<ChannelHandlerContext, Object> contextToCarrier = new HashMap<>();
 
-    private final List<LeasedContext> leasedContexts = new ArrayList<>();
+    protected final Map<Channel, Object> contextToCarrier = new HashMap<>();
+
+    protected final List<LeasedContext> leasedContexts = new ArrayList<>();
+
+    protected final CopyOnWriteArraySet<PoolProviderListener> listeners = new CopyOnWriteArraySet<>();
 
     /**
      * List of lease required tasks that could not be full filled without blocking the decoupler.
      */
-    private final Deque<ObtainLease> leasesRequired = new ArrayDeque<>();
+    protected final Deque<ObtainLease> leasesRequired = new ArrayDeque<>();
 
     /**
      * List of contexts that are immortal and do not age out.
      */
-    private final List<AvailableContext> immortalContexts = new ArrayList<>();
+    protected final List<AvailableContext> immortalContexts = new ArrayList<>();
 
     /**
      * List of contexts that are ephemeral.
      */
-    private final List<AvailableContext> ephemeralContexts = new ArrayList<>();
+    protected final List<AvailableContext> ephemeralContexts = new ArrayList<>();
 
-    private boolean noNewLeases = false;
-    private CountDownLatch stopLatch = null;
+    /**
+     * List of opening connections.
+     */
+    protected final List<OpenConnection> connectionsInProgress = new ArrayList<>();
 
 
-    public NettyConnectionPool(
+    protected boolean noNewLeases = false;
+    protected CountDownLatch stopLatch = null;
+
+
+    protected NettyConnectionPool(
         ConnectionInfoProvider connectionInfoProvider,
         ContextExceptionHandler contextExceptionHandler,
         LeaseExpiredHandler leaseExpiredHandler,
@@ -92,6 +96,7 @@ public class NettyConnectionPool implements PoolProvider
         BootstrapProvider bootstrapProvider,
         PoolExceptionHandler poolExceptionHandler,
         ExpiryHarvester expiryHarvester,
+        PostConnectEstablish postConnectEstablish,
         int immortalCount,
         int maxEphemeralCount,
         int ephemeralLifespan, String inboundHandlerName, int reaperInterval)
@@ -104,23 +109,23 @@ public class NettyConnectionPool implements PoolProvider
         this.bootstrapProvider = bootstrapProvider;
         this.poolExceptionHandler = poolExceptionHandler;
         this.expiryHarvester = expiryHarvester;
+        this.postConnectEstablish = postConnectEstablish;
         this.immortalCount = immortalCount;
         this.maxEphemeralCount = maxEphemeralCount;
         this.ephemeralLifespan = ephemeralLifespan;
         this.inboundHandlerName = inboundHandlerName;
         this.reaperInterval = reaperInterval;
-        this.totalContexts = immortalCount + maxEphemeralCount;
+
     }
 
     @Override
-    public ChannelHandlerContext lease(final long time, final TimeUnit units)
+    public Channel lease(final int time, final TimeUnit units, final Object userObject)
         throws PoolProviderException
     {
 
+        final ObtainLease ol = new ObtainLease(time, units, userObject);
 
-        final ObtainLease ol = new ObtainLease(time, units);
-
-
+        fireLeaseRequested(time, units, userObject);
         decoupler.execute(ol);
 
         try
@@ -139,49 +144,63 @@ public class NettyConnectionPool implements PoolProvider
     }
 
     @Override
-    public void yield(ChannelHandlerContext ctx)
+    public void yield(final Channel ctx)
         throws PoolProviderException
     {
-        Object carrier = contextToCarrier.get(ctx);
 
-
-        if (carrier instanceof LeasedContext)
+        decoupler.execute(new Runnable()
         {
-            leasedContexts.remove(carrier);
-            AvailableContext ac = null;
-
-            if (((LeasedContext)carrier).isEphemeral())
+            @Override
+            public void run()
             {
-                ac = new AvailableContext(-1, ((LeasedContext)carrier).getChannelHandlerContext(), -1, false);
-                immortalContexts.add(ac);
+
+
+                Object carrier = contextToCarrier.get(ctx);
+
+
+                if (carrier instanceof LeasedContext)
+                {
+                    leasedContexts.remove(carrier);
+                    AvailableContext ac = null;
+
+                    if (((LeasedContext)carrier).isImmortal())
+                    {
+                        ac = new AvailableContext(-1, ((LeasedContext)carrier).getChannelHandlerContext(), -1, true);
+                        immortalContexts.add(ac);
+                    }
+                    else
+                    {
+                        ac = new AvailableContext(System.currentTimeMillis() + ephemeralLifespan, ((LeasedContext)carrier).getChannelHandlerContext(), ephemeralLifespan, false);
+                        ephemeralContexts.add(ac);
+                    }
+
+                    contextToCarrier.put(ctx, ac);
+
+                    if (noNewLeases && leasedContexts.isEmpty())
+                    {
+                        decoupler.execute(new ShutdownTask());
+                    }
+                    else
+                    {
+                        pollNextRequestOntoDecoupler();
+                    }
+
+                    fireLeaseYield(NettyConnectionPool.this, ctx, ((LeasedContext)carrier).getUserObject());
+                }
+                else if (carrier instanceof AvailableContext)
+                {
+                    poolExceptionHandler.handleException(new PoolProviderException("Context is not out on lease."));
+                }
+                else
+                {
+                    poolExceptionHandler.handleException(new PoolProviderException("Unknown channel, has the lease expired.?"));
+                }
             }
-            else
-            {
-                ac = new AvailableContext(System.currentTimeMillis() + ephemeralLifespan, ((LeasedContext)carrier).getChannelHandlerContext(), ephemeralLifespan, true);
-                ephemeralContexts.add(ac);
-            }
-
-            contextToCarrier.put(ctx, ac);
-
-            if (noNewLeases && leasedContexts.isEmpty())
-            {
-                decoupler.execute(new ShutdownTask());
-            }
-
-        }
-        else if (carrier instanceof AvailableContext)
-        {
-            throw new PoolProviderException("Context is not out on lease.");
-        }
-        else
-        {
-            throw new PoolProviderException("Unknown context, had the lease expired.?");
-        }
-
+        });
     }
 
     @Override
-    public void Start(final CountDownLatch latch)
+    public void start()
         throws Exception
     {
 
@@ -195,10 +214,8 @@ public class NettyConnectionPool implements PoolProvider
                     new OpenConnection(false).run();
                 }
 
-                if (latch != null)
-                {
-                    latch.countDown();
-                }
+                fireStarted();
+
             }
         });
 
@@ -206,13 +223,12 @@ public class NettyConnectionPool implements PoolProvider
     }
 
     /**
-     * Stop the pool.
+     * stop the pool.
      *
      * @param force true to force shutdown immediately.
-     * @param latch Optional latch on which countDown() is called when completed.
      */
     @Override
-    public void Stop(final boolean force, final CountDownLatch latch)
+    public void stop(final boolean force)
     {
 
         decoupler.execute(new Runnable()
@@ -221,16 +237,35 @@ public class NettyConnectionPool implements PoolProvider
             public void run()
             {
                 noNewLeases = true;
-                stopLatch = latch;
+
                 if (force || leasedContexts.isEmpty())
                 {
                     new ShutdownTask().run();
                 }
+
+
             }
         });
 
     }
 
+    @Override
+    public void execute(Runnable runnable)
+    {
+        decoupler.execute(runnable);
+    }
+
+    @Override
+    public void addListener(PoolProviderListener listener)
+    {
+        listeners.add(listener);
+    }
+
+    @Override
+    public void removeListener(PoolProviderListener listener)
+    {
+        listeners.remove(listener);
+    }
 
     /**
      * Apply pre-lease to a list of free contexts and grab the first one that passes.
@@ -266,6 +301,71 @@ public class NettyConnectionPool implements PoolProvider
     }
 
 
+    protected void fireStarted()
+    {
+        for (PoolProviderListener l : listeners)
+        {
+            l.started(this);
+        }
+    }
+
+    protected void fireStopped()
+    {
+        for (PoolProviderListener l : listeners)
+        {
+            l.stopped(this);
+        }
+    }
+
+    protected void fireLeaseRequested(int leaseTime, TimeUnit units, Object userObject)
+    {
+        for (PoolProviderListener l : listeners)
+        {
+            l.leaseRequested(this, leaseTime, units, userObject);
+        }
+    }
+
+    protected void fireLeaseGranted(PoolProvider provider, Channel channel, Object userObject)
+    {
+        for (PoolProviderListener l : listeners)
+        {
+            l.leaseGranted(this, channel, userObject);
+        }
+    }
+
+    protected void fireLeaseYield(PoolProvider provider, Channel channel, Object userObject)
+    {
+        for (PoolProviderListener l : listeners)
+        {
+            l.leaseYield(this, channel, userObject);
+        }
+    }
+
+    protected void fireLeaseExpired(PoolProvider provider, Channel channel, Object userObject)
+    {
+        for (PoolProviderListener l : listeners)
+        {
+            l.leaseExpired(this, channel, userObject);
+        }
+    }
+
+    protected void fireConnectionClosed(Channel ctx)
+    {
+        for (PoolProviderListener l : listeners)
+        {
+            l.connectionClosed(this, ctx);
+        }
+    }
+
+    protected void fireConnectionCreated(Channel ctx, boolean immortal)
+    {
+        for (PoolProviderListener l : listeners)
+        {
+            l.connectionCreated(this, ctx, immortal);
+        }
+    }
+
+
     /**
      * Open a connection.
      */
@@ -285,7 +385,7 @@ public class NettyConnectionPool implements PoolProvider
         public void run()
         {
             Bootstrap bs = bootstrapProvider.createBootstrap(NettyConnectionPool.this);
-            ConnectionInfo ci = connectionInfoProvider.connectionInfo(NettyConnectionPool.this);
+            final ConnectionInfo ci = connectionInfoProvider.connectionInfo(NettyConnectionPool.this);
 
             final ChannelInitializer initializer = ci.getChannelInitializer();
 
@@ -300,11 +400,11 @@ public class NettyConnectionPool implements PoolProvider
                 if (future.isDone() && future.isSuccess())
                 {
 
-                    ChannelHandlerContext ctc = future.channel().pipeline().context(initializer);
+
                     //
                     //TODO check if there is a way to listen without adding a handler..
                     //
-                    ctc.pipeline().addFirst(inboundHandlerName, new SimpleChannelInboundHandler()
+                    future.channel().pipeline().addLast(inboundHandlerName, new SimpleChannelInboundHandler()
                     {
 
                         @Override
@@ -312,7 +412,7 @@ public class NettyConnectionPool implements PoolProvider
                             throws Exception
                         {
                             super.channelWritabilityChanged(ctx);
-                            decoupler.execute(new WritabilityChanged(ctx));
+                            decoupler.execute(new WritabilityChanged(ctx.channel()));
                         }
 
                         @Override
@@ -322,7 +422,7 @@ public class NettyConnectionPool implements PoolProvider
                             super.exceptionCaught(ctx, cause);
                             if (contextExceptionHandler.close(cause, NettyConnectionPool.this))
                             {
-                                decoupler.execute(new CloseContext(ctx));
+                                decoupler.execute(new CloseContext(ctx.channel()));
                             }
                         }
 
@@ -331,7 +431,7 @@ public class NettyConnectionPool implements PoolProvider
                             throws Exception
                         {
                             super.channelInactive(ctx);
-                            decoupler.execute(new ChannelInactive(ctx));
+                            decoupler.execute(new ChannelInactive(ctx.channel()));
                         }
 
                         @Override
@@ -342,21 +442,51 @@ public class NettyConnectionPool implements PoolProvider
                         }
                     });
 
+                    final Channel ctc = future.channel();
 
-                    AvailableContext ac = null;
-                    if (ephemeral)
+
+                    //
+                    // Do post connect establish phase.
+                    //
+                    postConnectEstablish.establish(ctc, NettyConnectionPool.this, new Runnable()
                     {
-                        ac = new AvailableContext(System.currentTimeMillis() + ephemeralLifespan, ctc, ephemeralLifespan, true);
-                        ephemeralContexts.add(ac);
-                    }
-                    else
-                    {
-                        ac = new AvailableContext(-1, ctc, -1, false);
-                        immortalContexts.add(ac);
-                    }
-                    contextToCarrier.put(ctc, ac);
+
+                        @Override
+                        public void run()
+                        {
+                            AvailableContext ac = null;
+                            if (ephemeral)
+                            {
+                                ac = new AvailableContext(System.currentTimeMillis() + ephemeralLifespan, ctc, ephemeralLifespan, true);
+                                fireConnectionCreated(ctc, true);
+                                ephemeralContexts.add(ac);
+                            }
+                            else
+                            {
+                                ac = new AvailableContext(-1, ctc, -1, false);
+                                fireConnectionCreated(ctc, false);
+                                immortalContexts.add(ac);
+                            }
+                            contextToCarrier.put(ctc, ac);
+
+                            //
+                            // If there are requests pending that are off the decoupler then
+                            // put the first one in the deque back on the decoupler before exiting.
+                            //
+                            pollNextRequestOntoDecoupler();
+                            connectionsInProgress.remove(OpenConnection.this);
+
+                        }
+                    });
 
 
+                }
+                else
+                {
+                    //
+                    // Connection opening failed.
+                    //
+                    connectionsInProgress.remove(OpenConnection.this);
                 }
 
             }
@@ -375,11 +505,13 @@ public class NettyConnectionPool implements PoolProvider
     {
         private final long leaseTime;
         private final TimeUnit units;
+        private final Object userObject;
 
-        public ObtainLease(long time, TimeUnit units)
+        public ObtainLease(long time, TimeUnit units, Object userObject)
         {
             this.leaseTime = time;
             this.units = units;
+            this.userObject = userObject;
         }
 
 
@@ -433,9 +565,21 @@ public class NettyConnectionPool implements PoolProvider
                 }
                 else
                 {
-                    LeasedContext lc = new LeasedContext(System.currentTimeMillis() + units.toMillis(leaseTime), ac.getChannelHandlerContext(), !ac.isImmortal());
+                    LeasedContext lc = new LeasedContext(System.currentTimeMillis() + units.toMillis(leaseTime), ac.getChannelHandlerContext(), !ac.isImmortal(), userObject);
                     leasedContexts.add(lc);
+                    contextToCarrier.put(lc.getChannelHandlerContext(), lc);
+
+
+                    //
+                    // We got a lease the next one might too.
+                    //
+                    pollNextRequestOntoDecoupler();
+
+
                     setResult(lc);
+                    fireLeaseGranted(NettyConnectionPool.this, lc.getChannelHandlerContext(), userObject);
+
+
                     return false; // Lease granted.
                 }
             }
@@ -454,196 +598,14 @@ public class NettyConnectionPool implements PoolProvider
 
     }
 
-
-    /**
-     * Builds the connection pool.
-     * <p>
-     * //TODO Example.
-     * </p>
-     */
-    public static class Builder
+    private void pollNextRequestOntoDecoupler()
     {
-        private ConnectionInfoProvider connectionInfoProvider;
-        private ContextExceptionHandler contextExceptionHandler;
-        private LeaseExpiredHandler leaseExpiredHandler;
-        private PreGrantLease preGrantLease;
-        private PreReturnToPool preReturnToPool;
-        private BootstrapProvider bootstrapProvider;
-        private PoolExceptionHandler poolExceptionHandler;
-        private ExpiryHarvester expiryHarvester;
-        private String inboundHandlerName = "_pool";
-
-
-        protected int immortalCount = 5;
-        protected int maxEphemeralCount = 5;
-        protected int ephemeralLifespan = 60000;
-        protected int reaperInterval = 15000;
-
-        public Builder(int immortalCount, int maxEphemeralCount, int ephemeralLifespan)
+        if (leasesRequired.isEmpty())
         {
-            this.immortalCount = immortalCount;
-            this.maxEphemeralCount = maxEphemeralCount;
-            this.ephemeralLifespan = ephemeralLifespan;
+            return;
         }
 
-        public Builder setExpiryHarvester(ExpiryHarvester expiryHarvester)
-        {
-            this.expiryHarvester = expiryHarvester;
-            return this;
-        }
-
-        public Builder withBootstrapProvider(BootstrapProvider bootstrapProvider)
-        {
-            this.bootstrapProvider = bootstrapProvider;
-            return this;
-        }
-
-        public Builder withPoolExceptionHandler(PoolExceptionHandler poolExceptionHandler)
-        {
-            this.poolExceptionHandler = poolExceptionHandler;
-            return this;
-        }
-
-        public Builder withConnectionInfoProvider(ConnectionInfoProvider connectionInfoProvider)
-        {
-            this.connectionInfoProvider = connectionInfoProvider;
-            return this;
-        }
-
-        public Builder withContextExceptionHandler(ContextExceptionHandler contextExceptionHandler)
-        {
-            this.contextExceptionHandler = contextExceptionHandler;
-            return this;
-        }
-
-        public Builder withLeaseExpiredHandler(LeaseExpiredHandler leaseExpiredHandler)
-        {
-            this.leaseExpiredHandler = leaseExpiredHandler;
-            return this;
-        }
-
-        public Builder withPreGrantLease(PreGrantLease preGrantLease)
-        {
-            this.preGrantLease = preGrantLease;
-            return this;
-        }
-
-        public Builder withPreReturnToPool(PreReturnToPool preReturnToPool)
-        {
-            this.preReturnToPool = preReturnToPool;
-            return this;
-        }
-
-        public Builder withInboundHandlerName(String inboundHandlerName)
-        {
-            this.inboundHandlerName = inboundHandlerName;
-            return this;
-        }
-
-        public Builder withReaperInterval(int reaperInterval)
-        {
-            this.reaperInterval = reaperInterval;
-            return this;
-        }
-
-        public NettyConnectionPool build()
-        {
-            if (connectionInfoProvider == null)
-            {
-                throw new IllegalStateException("No connection info provider.");
-            }
-
-            if (bootstrapProvider == null)
-            {
-                throw new IllegalArgumentException("No Bootstrap provider.");
-            }
-
-
-            //
-            // Default exception handling is to close the offending context ungracefully.
-            //
-            if (contextExceptionHandler == null)
-            {
-                contextExceptionHandler = new ContextExceptionHandler()
-                {
-                    @Override
-                    public boolean close(Throwable throwable, PoolProvider provider)
-                    {
-                        return true;
-                    }
-                };
-            }
-
-            //
-            // Default action is to close the expired context.
-            // If you don't want to have leases then set the time to 0 when you take out the lease.
-            //
-            if (leaseExpiredHandler == null)
-            {
-                leaseExpiredHandler = new LeaseExpiredHandler()
-                {
-                    @Override
-                    public boolean closeExpiredLease(ChannelHandlerContext context, PoolProvider provider)
-                    {
-                        return true;
-                    }
-                };
-            }
-
-            //
-            // Default action is to continue to grant the lease.
-            //
-            if (preGrantLease == null)
-            {
-                preGrantLease = new PreGrantLease()
-                {
-                    @Override
-                    public boolean continueToGrantLease(ChannelHandlerContext context, PoolProvider provider)
-                    {
-                        return true;
-                    }
-                };
-            }
-
-            if (preReturnToPool == null)
-            {
-                preReturnToPool = new PreReturnToPool()
-                {
-                    @Override
-                    public boolean returnToPoolOrDisposeNow(ChannelHandlerContext context, PoolProvider provider)
-                    {
-                        return true;
-                    }
-                };
-            }
-
-            if (poolExceptionHandler == null)
-            {
-                poolExceptionHandler = new PoolExceptionHandler()
-                {
-                    @Override
-                    public void handleException(Throwable th)
-                    {
-                        th.printStackTrace();
-                    }
-                };
-            }
-
-
-            return new NettyConnectionPool(
-                connectionInfoProvider,
-                contextExceptionHandler,
-                leaseExpiredHandler,
-                preGrantLease,
-                preReturnToPool,
-                bootstrapProvider,
-                poolExceptionHandler,
-                expiryHarvester,
-                immortalCount,
-                maxEphemeralCount,
-                ephemeralLifespan,
-                inboundHandlerName, reaperInterval);
-        }
+        decoupler.execute(leasesRequired.pollFirst());
     }
 
 
@@ -653,11 +615,11 @@ public class NettyConnectionPool implements PoolProvider
     private class WritabilityChanged implements Runnable
     {
 
-        private final ChannelHandlerContext context;
+        private final Channel channel;
 
-        public WritabilityChanged(ChannelHandlerContext ctx)
+        public WritabilityChanged(Channel ctx)
         {
-            this.context = ctx;
+            this.channel = ctx;
         }
 
 
@@ -666,23 +628,23 @@ public class NettyConnectionPool implements PoolProvider
         {
             //TODO This could be elaborated upon.
 
-            Channel c = context.channel();
-            if (!c.isActive() || !c.isOpen() || c.isWritable())
+
+            if (!channel.isActive() || !channel.isOpen() || channel.isWritable())
             {
-                decoupler.execute(new CloseContext(context));
+                decoupler.execute(new CloseContext(channel));
             }
         }
     }
 
 
     /**
-     * Close a context task
+     * Close a channel task
      */
     private class CloseContext implements Runnable
     {
-        private ChannelHandlerContext ctx;
+        private Channel ctx;
 
-        public CloseContext(ChannelHandlerContext ctx)
+        public CloseContext(Channel ctx)
         {
             this.ctx = ctx;
         }
@@ -702,17 +664,19 @@ public class NettyConnectionPool implements PoolProvider
             }
 
             ctx.close();
+            fireConnectionClosed(ctx);
         }
     }
+
 
     /**
      * Called when the channel becomes inactive..
      */
     private class ChannelInactive implements Runnable
     {
-        private final ChannelHandlerContext ctx;
+        private final Channel ctx;
 
-        public ChannelInactive(ChannelHandlerContext ctx)
+        public ChannelInactive(Channel ctx)
         {
             this.ctx = ctx;
         }
@@ -761,10 +725,7 @@ public class NettyConnectionPool implements PoolProvider
                 }
             }
 
-            if (stopLatch != null)
-            {
-                stopLatch.countDown();
-            }
+            fireStopped();
 
         }
     }
