@@ -189,7 +189,7 @@ a channel initializer.</td></tr>
 of the connection. For example logging into the end service at the other end of the connection. Please see the Javadoc.</td></tr>
 
 <tr><td>PreGrantLease</td><td>Gives users the ability to block the granting of a lease.</td></tr>
-<tr><td>PreReturnToPool</td><td>Gives users the make closure decisions on a channel as it returns to the pool.</td></tr>
+<tr><td>PreReturnToPool</td><td>Gives users the chance to make closure decisions on a channel as it returns to the pool.</td></tr>
 </table>
 
 
@@ -216,6 +216,6 @@ ncp.execute(new Runnable(){public void run(){ .. etc ..  }});
 
 `
 
-There is one exception to the concurrency model and that is the pool Listeners which use a CopyOnWriteSet. This was
+There is one exception to the concurrency model and that is the pool Listeners which use a CopyOnWriteArraySet. This was
 done because it is unlikely that there will be a lot of changes to pool listener list and some events are not fired from
 the decoupler.
