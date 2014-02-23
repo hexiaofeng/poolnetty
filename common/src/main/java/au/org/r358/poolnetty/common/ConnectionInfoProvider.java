@@ -26,7 +26,7 @@ package au.org.r358.poolnetty.common;
  * <p>As netty context is much more than a simple connection, the complexity of setting up handlers needs to be delegated.</p>
  * <p>It is safe to return the same instance of ConnectionInfo.</p>
  * <p/>
- * <p>Note that the pool will add a transparent ChannelInboundHandler and ChannelOutboundHandler.</p>
+ * <p>Note that the pool will add a transparent ChannelInboundHandler.</p>
  * <p><B>Thread Safety:</B> A PoolProvider guarantees to sequentially call this interface during connection creation, if an implementation is shared between pool providers then no such guarantees are made.</p>
  */
 public interface ConnectionInfoProvider

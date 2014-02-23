@@ -22,6 +22,7 @@ package au.org.r358.poolnetty.common;
 import au.org.r358.poolnetty.common.exceptions.PoolProviderException;
 import io.netty.channel.Channel;
 
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -33,22 +34,36 @@ import java.util.concurrent.TimeUnit;
  */
 public interface PoolProvider
 {
+
+    Future<LeasedChannel> leaseAsync(int time, TimeUnit units, Object userObject);
+
     /**
-     * Request a ChannelHandlerContext from the pool
+     * Request a lease.
+     *
+     *
+     * @param time       The lease time.
+     * @param units      Time unists.
+     * @param userObject The user object
+     * @return A future.
+     */
+    Future<LeasedChannel> leaseAsync(int time, TimeUnit units, Object userObject, LeaseListener listener);
+
+    /**
+     * Blocking Request a ChannelHandlerContext from the pool
      *
      * @return The context.
      * @throws Exception
      */
-    Channel lease(int leaseTime, TimeUnit units, Object userObject)
+    LeasedChannel lease(int leaseTime, TimeUnit units, Object userObject)
         throws PoolProviderException;
 
     /**
-     * Release a context back to the pool
+     * Release a channel back to the pool
      *
-     * @param ctx The context to release.
+     * @param channel The context to release.
      * @throws PoolProviderException if the context is unknown to the pool or declared lost to the pool because lease time expired.
      */
-    void yield(Channel ctx)
+    void yield(Channel channel)
         throws PoolProviderException;
 
     void start()

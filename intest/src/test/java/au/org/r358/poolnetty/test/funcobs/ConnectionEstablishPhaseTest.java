@@ -1,4 +1,4 @@
-package au.org.r358.poolnetty.test;
+package au.org.r358.poolnetty.test.funcobs;
 
 import au.org.r358.poolnetty.common.*;
 import au.org.r358.poolnetty.pool.NettyConnectionPool;
@@ -25,7 +25,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 
 /**
- *
+ * Function Observation test to ensure all the events occur in the correct order.
+ * Using single connection.
  */
 @RunWith(JUnit4.class)
 public class ConnectionEstablishPhaseTest
@@ -114,6 +115,12 @@ public class ConnectionEstablishPhaseTest
             public void connectionCreated(PoolProvider provider, Channel ctx, boolean immortal)
             {
                 connectionOpenedLatch.countDown();
+            }
+
+            @Override
+            public void ephemeralReaped(PoolProvider poolProvider, Channel channel)
+            {
+                // Not tested here..
             }
         };
 
@@ -269,8 +276,8 @@ public class ConnectionEstablishPhaseTest
         //
         // Check we got back what we sent etc.
         //
-        TestCase.assertTrue(originalMessage.equals(messageAtServer.get()));
-        TestCase.assertTrue(originalMessage.equals(respValue.get()));
+        TestCase.assertEquals(originalMessage, messageAtServer.get());
+        TestCase.assertEquals(originalMessage, respValue.get());
 
 
         //
@@ -282,6 +289,7 @@ public class ConnectionEstablishPhaseTest
         TestCase.assertEquals(userObject + ".granted", listOfUserObjectReports.get(1));
         TestCase.assertEquals(userObject + ".yield", listOfUserObjectReports.get(2));
 
+        simpleServer.stop();
     }
 
 }

@@ -85,17 +85,25 @@ public interface PoolProviderListener
      * Called when a connection is closed.
      *
      * @param provider The provider.
-     * @param ctx      The channel.
+     * @param channel  The channel.
      */
-    void connectionClosed(PoolProvider provider, Channel ctx);
+    void connectionClosed(PoolProvider provider, Channel channel);
 
 
     /**
-     * Called whena  connection is created.
+     * Called when a  connection is created.
      *
      * @param provider The provider.
-     * @param ctx      The context.
-     * @param immortal true if imortal.
+     * @param channel  The context.
+     * @param immortal true if immortal.
      */
-    void connectionCreated(PoolProvider provider, Channel ctx, boolean immortal);
+    void connectionCreated(PoolProvider provider, Channel channel, boolean immortal);
+
+    /**
+     * Called when a connection is reaped, and is scheduled for closure.
+     *
+     * @param poolProvider The provider.
+     * @param channel      The Channel.
+     */
+    void ephemeralReaped(PoolProvider poolProvider, Channel channel);
 }

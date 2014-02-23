@@ -101,7 +101,6 @@ public class SimpleServer implements Runnable
     {
         channelFuture = bootstrap.bind().syncUninterruptibly().awaitUninterruptibly();
 
-
     }
 
     public void start()
@@ -119,6 +118,9 @@ public class SimpleServer implements Runnable
 
     public void stop()
     {
-        channelFuture.channel().close().syncUninterruptibly();
+        if (channelFuture != null)
+        {
+            channelFuture.channel().close().syncUninterruptibly();
+        }
     }
 }

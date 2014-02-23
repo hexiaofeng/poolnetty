@@ -21,6 +21,8 @@ package au.org.r358.poolnetty.pool;
 
 import io.netty.channel.Channel;
 
+import java.util.concurrent.ScheduledFuture;
+
 /**
  * A wrapper for the context.
  * Not thread safe.
@@ -31,20 +33,30 @@ public class AvailableContext
     private final Channel channelHandlerContext;
     private final int lifespan;
     private final boolean immortal;
+    private final ScheduledFuture reaper;
 
-    public AvailableContext(long closeAfter, Channel channelHandlerContext, int lifespan, boolean immortal)
+    public AvailableContext(long closeAfter, Channel channelHandlerContext, int lifespan, boolean immortal, ScheduledFuture reaper)
     {
         this.closeAfter = closeAfter;
         this.channelHandlerContext = channelHandlerContext;
         this.lifespan = lifespan;
         this.immortal = immortal;
+        this.reaper = reaper;
     }
 
-    public Channel getChannelHandlerContext()
+    public Channel getChannel()
     {
         return channelHandlerContext;
     }
 
+
+    public void cancelReaper()
+    {
+        if (reaper != null)
+        {
+            reaper.cancel(false); // Should not be an issue as it is all running from the same decoupler within the pool.
+        }
+    }
 
     /**
      * Has this context expired.

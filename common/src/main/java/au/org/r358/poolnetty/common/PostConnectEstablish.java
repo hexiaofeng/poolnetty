@@ -29,7 +29,11 @@ import io.netty.channel.Channel;
  * When complete, you need to put the completeTask on the pool providers decoupler thread.
  * Example:
  * <code>
+ * public void establish(Channel channel, PoolProvider provider, Runnable completeTask) {
+ * // Do stuff to channel, send messages, negotiate with other end etc.
+ * // Then when all that is done you must ensure the completeTask is executed by the pool provider.
  * provider.execute(completeTask)
+ * }
  * </code>
  */
 public interface PostConnectEstablish
@@ -41,9 +45,9 @@ public interface PostConnectEstablish
      * This method is called on the pools decoupler and it is advisable for you to complete this phase asynchronously.
      * When you are complete, place the Runnable from completeTask onto the pool providers decoupler.
      *
-     * @param ctx
-     * @param provider
-     * @param completeTask
+     * @param channel      The channel.
+     * @param provider     The provider.
+     * @param completeTask The task to put back on the providers decoupler via provider.execute(completeTask)
      */
-    void establish(Channel ctx, PoolProvider provider, Runnable completeTask);
+    void establish(Channel channel, PoolProvider provider, Runnable completeTask);
 }

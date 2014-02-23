@@ -47,13 +47,10 @@ public abstract class DeferrableTask<V> implements Runnable
         {
             if (runOrDefer())
             {
-                firstAttempt = false;
                 defer();
+                firstAttempt = false;
             }
-            else
-            {
-                latch.countDown();
-            }
+
         }
         catch (Exception ex)
         {

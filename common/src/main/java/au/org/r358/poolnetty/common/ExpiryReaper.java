@@ -19,21 +19,22 @@
 
 package au.org.r358.poolnetty.common;
 
-import io.netty.channel.Channel;
+import java.util.List;
 
 /**
- * Intercept the lease granting process before the context is leased.
- * <p>Gives implementers the option of stopping a lease from occurring
- * or perhaps firing a message down the pipe to wake the other end up.</p>
+ * Implementations of this class are responsible for reaping expired leases.
+ * <p>Consider how your implementation will function id there are 1000's of leases.</p>
  */
-public interface PreGrantLease
+public interface ExpiryReaper
 {
+
     /**
-     * Continue to grant lease (true)
+     * Reap the harvest.
      *
-     * @param context  The context to be leased.
-     * @param provider The provider of the lease.
-     * @return true to grant the lease, false to deny the lease.
+     * @param currentLeases List of current leases.
+     * @return A List of leases to be reaped.
      */
-    boolean continueToGrantLease(Channel context, PoolProvider provider, Object userObject);
+    List<LeasedContext> reapHarvest(List<LeasedContext> currentLeases);
+
+
 }

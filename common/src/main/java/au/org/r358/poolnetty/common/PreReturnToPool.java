@@ -19,12 +19,13 @@
 
 package au.org.r358.poolnetty.common;
 
-import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.Channel;
+
 
 /**
  * Intercept contexts before they are returned to the pool.
  * <p/>
- * <p>The Pool provider will keep ChannelHandlerContexts around until they expire or get closed,
+ * <p>The Pool provider will keep Channels around until they expire or get closed,
  * this handler gives the users of the pool a mechanism to remove contexts outside of that.</p>
  */
 public interface PreReturnToPool
@@ -37,5 +38,5 @@ public interface PreReturnToPool
      * @param provider The provider.
      * @return true to return to pool or false to be disposed.
      */
-    boolean returnToPoolOrDisposeNow(ChannelHandlerContext context, PoolProvider provider);
+    boolean returnToPoolOrDisposeNow(Channel context, PoolProvider provider, Object userObject);
 }

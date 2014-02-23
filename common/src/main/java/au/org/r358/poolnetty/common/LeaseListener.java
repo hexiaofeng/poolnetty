@@ -19,22 +19,10 @@
 
 package au.org.r358.poolnetty.common;
 
-import java.util.List;
-
 /**
- * Implementations of this class are responsible for reaping expired leases.
- * <p>Consider how your implementation will function id there are 1000's of leases.</p>
+ * A lease listener when passed in for an asynchronous lease request is invoked when the lease is granted or is unsuccessful;
  */
-public interface ExpiryHarvester
+public interface LeaseListener
 {
-
-    /**
-     * Reap the harvest.
-     *
-     * @param currentLeases List of current leases.
-     * @return A List of leases to be reaped.
-     */
-    List<LeasedContext> reapHarvest(List<LeasedContext> currentLeases);
-
-
+    void leaseRequest(boolean success, LeasedChannel channel, Throwable th);
 }

@@ -17,23 +17,38 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package au.org.r358.poolnetty.common;
+package au.org.r358.poolnetty.pool.reaper;
 
-import io.netty.channel.Channel;
+import au.org.r358.poolnetty.common.ExpiryReaper;
+import au.org.r358.poolnetty.common.LeasedContext;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Intercept the lease granting process before the context is leased.
- * <p>Gives implementers the option of stopping a lease from occurring
- * or perhaps firing a message down the pipe to wake the other end up.</p>
+ * Very simple reaper that considers the whole lease list in one pass.
  */
-public interface PreGrantLease
+public class FullPassSimpleReaper implements ExpiryReaper
 {
-    /**
-     * Continue to grant lease (true)
-     *
-     * @param context  The context to be leased.
-     * @param provider The provider of the lease.
-     * @return true to grant the lease, false to deny the lease.
-     */
-    boolean continueToGrantLease(Channel context, PoolProvider provider, Object userObject);
+    @Override
+    public List<LeasedContext> reapHarvest(List<LeasedContext> currentLeases)
+    {
+        long zeit = System.currentTimeMillis();
+        List<LeasedContext> toBeExpired = null;
+        for (LeasedContext lc : currentLeases)
+        {
+            if (lc.expiredLease(zeit))
+            {
+                if (toBeExpired == null)
+                {
+                    toBeExpired = new ArrayList<>();
+                }
+
+                toBeExpired.add(lc);
+
+            }
+        }
+
+        return toBeExpired;
+    }
 }

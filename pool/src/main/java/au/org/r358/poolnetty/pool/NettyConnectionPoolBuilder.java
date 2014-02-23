@@ -38,22 +38,22 @@ public class NettyConnectionPoolBuilder
     protected PreReturnToPool preReturnToPool;
     protected BootstrapProvider bootstrapProvider;
     protected PoolExceptionHandler poolExceptionHandler;
-    protected ExpiryHarvester expiryHarvester;
+    protected ExpiryReaper expiryReaper;
     protected PostConnectEstablish postConnectEstablish;
     protected String inboundHandlerName = "_pool";
 
 
     protected int immortalCount = 5;
     protected int maxEphemeralCount = 5;
-    protected int ephemeralLifespan = 60000;
-    protected int reaperInterval = 15000;
+    protected int ephemeralLifespanMillis = 60000;
+    protected int reaperIntervalMillis = 15000;
 
 
-    public NettyConnectionPoolBuilder(int immortalCount, int maxEphemeralCount, int ephemeralLifespan)
+    public NettyConnectionPoolBuilder(int immortalCount, int maxEphemeralCount, int ephemeralLifespanMillis)
     {
         this.immortalCount = immortalCount;
         this.maxEphemeralCount = maxEphemeralCount;
-        this.ephemeralLifespan = ephemeralLifespan;
+        this.ephemeralLifespanMillis = ephemeralLifespanMillis;
     }
 
     public NettyConnectionPoolBuilder withPostConnectEstablish(PostConnectEstablish postConnectEstablish)
@@ -62,9 +62,9 @@ public class NettyConnectionPoolBuilder
         return this;
     }
 
-    public NettyConnectionPoolBuilder withExpiryHarvester(ExpiryHarvester expiryHarvester)
+    public NettyConnectionPoolBuilder withExpiryHarvester(ExpiryReaper expiryReaper)
     {
-        this.expiryHarvester = expiryHarvester;
+        this.expiryReaper = expiryReaper;
         return this;
     }
 
@@ -116,9 +116,9 @@ public class NettyConnectionPoolBuilder
         return this;
     }
 
-    public NettyConnectionPoolBuilder withReaperInterval(int reaperInterval)
+    public NettyConnectionPoolBuilder withReaperIntervalMillis(int reaperInterval)
     {
-        this.reaperInterval = reaperInterval;
+        this.reaperIntervalMillis = reaperInterval;
         return this;
     }
 
@@ -159,7 +159,7 @@ public class NettyConnectionPoolBuilder
             leaseExpiredHandler = new LeaseExpiredHandler()
             {
                 @Override
-                public boolean closeExpiredLease(ChannelHandlerContext context, PoolProvider provider)
+                public boolean closeExpiredLease(LeasedContext context, PoolProvider provider)
                 {
                     return true;
                 }
@@ -174,7 +174,7 @@ public class NettyConnectionPoolBuilder
             preGrantLease = new PreGrantLease()
             {
                 @Override
-                public boolean continueToGrantLease(Channel context, PoolProvider provider)
+                public boolean continueToGrantLease(Channel context, PoolProvider provider, Object userObject)
                 {
                     return true;
                 }
@@ -186,7 +186,7 @@ public class NettyConnectionPoolBuilder
             preReturnToPool = new PreReturnToPool()
             {
                 @Override
-                public boolean returnToPoolOrDisposeNow(ChannelHandlerContext context, PoolProvider provider)
+                public boolean returnToPoolOrDisposeNow(Channel context, PoolProvider provider,Object userObject)
                 {
                     return true;
                 }
@@ -226,11 +226,11 @@ public class NettyConnectionPoolBuilder
             preReturnToPool,
             bootstrapProvider,
             poolExceptionHandler,
-            expiryHarvester,
+            expiryReaper,
             postConnectEstablish,
             immortalCount,
             maxEphemeralCount,
-            ephemeralLifespan,
-            inboundHandlerName, reaperInterval);
+            ephemeralLifespanMillis,
+            inboundHandlerName, reaperIntervalMillis);
     }
 }

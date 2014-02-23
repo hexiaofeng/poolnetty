@@ -15,7 +15,7 @@ import org.junit.runners.JUnit4;
 import java.util.List;
 
 /**
- *
+ * Test the pool builder sets the correct values.
  */
 @RunWith(JUnit4.class)
 public class NettyConnectionPoolBuilderTest
@@ -38,7 +38,7 @@ public class NettyConnectionPoolBuilderTest
 
         nt.withPostConnectEstablish(pce);
 
-        ExpiryHarvester expH = new ExpiryHarvester()
+        ExpiryReaper expH = new ExpiryReaper()
         {
             @Override
             public List<LeasedContext> reapHarvest(List<LeasedContext> currentLeases)
@@ -98,7 +98,7 @@ public class NettyConnectionPoolBuilderTest
         LeaseExpiredHandler leh = new LeaseExpiredHandler()
         {
             @Override
-            public boolean closeExpiredLease(ChannelHandlerContext context, PoolProvider provider)
+            public boolean closeExpiredLease(LeasedContext context, PoolProvider provider)
             {
                 return false;
             }
@@ -108,7 +108,7 @@ public class NettyConnectionPoolBuilderTest
         PreGrantLease pgl = new PreGrantLease()
         {
             @Override
-            public boolean continueToGrantLease(Channel context, PoolProvider provider)
+            public boolean continueToGrantLease(Channel context, PoolProvider provider, Object userObject)
             {
                 return false;
             }
@@ -118,7 +118,7 @@ public class NettyConnectionPoolBuilderTest
         PreReturnToPool prp = new PreReturnToPool()
         {
             @Override
-            public boolean returnToPoolOrDisposeNow(ChannelHandlerContext context, PoolProvider provider)
+            public boolean returnToPoolOrDisposeNow(Channel context, PoolProvider provider, Object userObject)
             {
                 return false;
             }
@@ -130,13 +130,13 @@ public class NettyConnectionPoolBuilderTest
         nt.withInboundHandlerName(inHandName);
 
         int reaperInterval = 1;
-        nt.withReaperInterval(reaperInterval);
+        nt.withReaperIntervalMillis(reaperInterval);
 
 
         NettyConnectionPool ncp = nt.build();
 
         TestCase.assertEquals(pce, TestUtil.getField(ncp, "postConnectEstablish"));
-        TestCase.assertEquals(expH, TestUtil.getField(ncp, "expiryHarvester"));
+        TestCase.assertEquals(expH, TestUtil.getField(ncp, "expiryReaper"));
         TestCase.assertEquals(bsp, TestUtil.getField(ncp, "bootstrapProvider"));
         TestCase.assertEquals(peh, TestUtil.getField(ncp, "poolExceptionHandler"));
         TestCase.assertEquals(cip, TestUtil.getField(ncp, "connectionInfoProvider"));
@@ -145,10 +145,10 @@ public class NettyConnectionPoolBuilderTest
         TestCase.assertEquals(pgl, TestUtil.getField(ncp, "preGrantLease"));
         TestCase.assertEquals(prp, TestUtil.getField(ncp, "preReturnToPool"));
         TestCase.assertEquals(inHandName, TestUtil.getField(ncp, "inboundHandlerName"));
-        TestCase.assertEquals(reaperInterval, TestUtil.getField(ncp, "reaperInterval"));
+        TestCase.assertEquals(reaperInterval, TestUtil.getField(ncp, "reaperIntervalMillis"));
         TestCase.assertEquals(1, TestUtil.getField(ncp, "immortalCount"));
         TestCase.assertEquals(2, TestUtil.getField(ncp, "maxEphemeralCount"));
-        TestCase.assertEquals(3, TestUtil.getField(ncp, "ephemeralLifespan"));
+        TestCase.assertEquals(3, TestUtil.getField(ncp, "ephemeralLifespanMillis"));
 
 
     }

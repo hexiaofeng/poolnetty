@@ -35,5 +35,5 @@ public interface LeaseExpiredHandler
      * @param provider The provider.
      * @return true to close the context.
      */
-    boolean closeExpiredLease(ChannelHandlerContext context, PoolProvider provider);
+    boolean closeExpiredLease(LeasedContext context, PoolProvider provider);
 }

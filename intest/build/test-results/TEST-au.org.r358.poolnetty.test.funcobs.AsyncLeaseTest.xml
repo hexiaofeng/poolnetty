@@ -1,0 +1,11 @@
+<?xml version="1.1" encoding="UTF-8"?>
+<testsuite name="au.org.r358.poolnetty.test.funcobs.AsyncLeaseTest" tests="2" failures="0" errors="0" timestamp="1970-01-01T00:00:00" hostname="MEGAN-WOODSs-iMac.local" time="1.393151661318E9">
+  <properties/>
+  <testcase name="testWithCallbackListener" classname="au.org.r358.poolnetty.test.funcobs.AsyncLeaseTest" time="0.47"/>
+  <testcase name="testWithFuture" classname="au.org.r358.poolnetty.test.funcobs.AsyncLeaseTest" time="0.012"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[log4j:WARN No appenders could be found for logger (io.netty.util.internal.logging.InternalLoggerFactory).
+log4j:WARN Please initialize the log4j system properly.
+log4j:WARN See http://logging.apache.org/log4j/1.2/faq.html#noconfig for more info.
+]]></system-err>
+</testsuite>
