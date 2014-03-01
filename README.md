@@ -206,15 +206,13 @@ task that they require the completion of. This task will then ensure the depende
 The general ambition is to keep the executor service (decoupler) free of obstructions, while endeavouring to move the
 blocking tasks are out of the way until they need to modify structures within the pool.
 
-At present there is one task that could block excessively and that is responsible for opening connections. An option may
-be added so that users can specify a multi thread executor service for that purpose. If your opening 1000's of
-connections and you have a high turn over this could become an issue.
-
 To execute a runnable on the Pools decoupler:
-`
-ncp.execute(new Runnable(){public void run(){ .. etc ..  }});
 
-`
+```java
+  ncp.execute(new Runnable(){
+     public void run(){ .. etc ..  }
+  });
+```
 
 There is one exception to the concurrency model and that is the pool Listeners which use a CopyOnWriteArraySet. This was
 done because it is unlikely that there will be a lot of changes to pool listener list and some events are not fired from

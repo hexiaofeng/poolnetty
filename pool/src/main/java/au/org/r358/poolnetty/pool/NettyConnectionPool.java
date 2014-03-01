@@ -125,8 +125,9 @@ public class NettyConnectionPool implements PoolProvider
     }
 
     @Override
-    public Future<LeasedChannel> leaseAsync(int time, TimeUnit units, Object userObject) {
-        return leaseAsync(time,units,userObject,null);
+    public Future<LeasedChannel> leaseAsync(int time, TimeUnit units, Object userObject)
+    {
+        return leaseAsync(time, units, userObject, null);
     }
 
     @Override
@@ -372,7 +373,7 @@ public class NettyConnectionPool implements PoolProvider
             while (--c >= 0)
             {
                 AvailableContext ac = contextList.remove(0);
-                if (preGrantLease.continueToGrantLease(ac.getChannel(), NettyConnectionPool.this,userObject ))
+                if (preGrantLease.continueToGrantLease(ac.getChannel(), NettyConnectionPool.this, userObject))
                 {
                     return ac;
                 }
@@ -513,131 +514,146 @@ public class NettyConnectionPool implements PoolProvider
             final ConnectionInfo ci = connectionInfoProvider.connectionInfo(NettyConnectionPool.this);
 
             final ChannelInitializer initializer = ci.getChannelInitializer();
-
-
             bs.handler(initializer);
 
             try
             {
-                ChannelFuture future = bs.connect(ci.getRemoteSocketAddress(), ci.getLocalSocketAddress()).sync().await();
-
-
-                if (future.isDone() && future.isSuccess())
+                bs.connect(ci.getRemoteSocketAddress(), ci.getLocalSocketAddress()).sync().addListener(new ChannelFutureListener()
                 {
-
-
-                    //
-                    //TODO check if there is a way to listen without adding a handler..
-                    //
-                    future.channel().pipeline().addLast(inboundHandlerName, new SimpleChannelInboundHandler()
+                    @Override
+                    public void operationComplete(final ChannelFuture future)
+                        throws Exception
                     {
-
-                        @Override
-                        public void channelWritabilityChanged(ChannelHandlerContext ctx)
-                            throws Exception
+                        //
+                        // Put result back on the decoupler.
+                        //
+                        decoupler.execute(new Runnable()
                         {
-                            super.channelWritabilityChanged(ctx);
-                            decoupler.execute(new WritabilityChanged(ctx.channel()));
-                        }
-
-                        @Override
-                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
-                            throws Exception
-                        {
-                            super.exceptionCaught(ctx, cause);
-                            if (contextExceptionHandler.close(cause, NettyConnectionPool.this))
+                            @Override
+                            public void run()
                             {
-                                decoupler.execute(new CloseContext(ctx.channel()));
+                                if (future.isDone() && future.isSuccess())
+                                {
+                                    //
+                                    //TODO check if there is a way to listen without adding a handler..
+                                    //
+                                    future.channel().pipeline().addLast(inboundHandlerName, new SimpleChannelInboundHandler()
+                                    {
+
+                                        @Override
+                                        public void channelWritabilityChanged(ChannelHandlerContext ctx)
+                                            throws Exception
+                                        {
+                                            super.channelWritabilityChanged(ctx);
+                                            decoupler.execute(new WritabilityChanged(ctx.channel()));
+                                        }
+
+                                        @Override
+                                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
+                                            throws Exception
+                                        {
+                                            super.exceptionCaught(ctx, cause);
+                                            if (contextExceptionHandler.close(cause, NettyConnectionPool.this))
+                                            {
+                                                decoupler.execute(new CloseContext(ctx.channel()));
+                                            }
+                                        }
+
+                                        @Override
+                                        public void channelInactive(ChannelHandlerContext ctx)
+                                            throws Exception
+                                        {
+                                            super.channelInactive(ctx);
+                                            decoupler.execute(new ChannelInactive(ctx.channel()));
+                                        }
+
+                                        @Override
+                                        protected void channelRead0(ChannelHandlerContext ctx, Object msg)
+                                            throws Exception
+                                        {
+                                            ctx.fireChannelRead(msg);
+                                        }
+                                    });
+
+                                    final Channel ctc = future.channel();
+
+
+                                    //
+                                    // Do post connect establish phase.
+                                    //
+                                    postConnectEstablish.establish(ctc, NettyConnectionPool.this, new Runnable()
+                                    {
+
+                                        @Override
+                                        public void run()
+                                        {
+                                            AvailableContext ac = null;
+                                            if (ephemeral)
+                                            {
+                                                EphemeralReaper reaper = new EphemeralReaper(ephemeralLifespanMillis);
+                                                ac = new AvailableContext(
+                                                    System.currentTimeMillis() + ephemeralLifespanMillis,
+                                                    ctc,
+                                                    ephemeralLifespanMillis,
+                                                    true,
+                                                    decoupler.schedule(reaper, ephemeralLifespanMillis, TimeUnit.MILLISECONDS));
+
+                                                reaper.context = ac;
+                                                fireConnectionCreated(ctc, true);
+                                                ephemeralContexts.add(ac);
+                                            }
+                                            else
+                                            {
+                                                ac = new AvailableContext(-1, ctc, -1, false, null);
+                                                fireConnectionCreated(ctc, false);
+                                                immortalContexts.add(ac);
+                                            }
+                                            contextToCarrier.put(ctc, ac);
+
+                                            //
+                                            // If there are requests pending that are off the decoupler then
+                                            // put the first one in the deque back on the decoupler before exiting.
+                                            //
+
+                                            connectionsInProgress.remove(OpenConnection.this);
+
+                                            if (obtainLease != null)
+                                            {
+                                                obtainLease.run();
+                                            }
+                                            else
+                                            {
+
+                                                pollNextRequestOntoDecoupler();
+                                            }
+                                        }
+                                    });
+
+
+                                }
+                                else
+                                {
+                                    //
+                                    // Connection opening failed.
+                                    //
+                                    connectionsInProgress.remove(OpenConnection.this);
+                                    if (obtainLease != null)
+                                    {
+                                        leasesRequired.add(obtainLease); // Put it back on the request list.
+                                    }
+
+                                }
                             }
-                        }
+                        });
 
-                        @Override
-                        public void channelInactive(ChannelHandlerContext ctx)
-                            throws Exception
-                        {
-                            super.channelInactive(ctx);
-                            decoupler.execute(new ChannelInactive(ctx.channel()));
-                        }
-
-                        @Override
-                        protected void channelRead0(ChannelHandlerContext ctx, Object msg)
-                            throws Exception
-                        {
-                            ctx.fireChannelRead(msg);
-                        }
-                    });
-
-                    final Channel ctc = future.channel();
-
-
-                    //
-                    // Do post connect establish phase.
-                    //
-                    postConnectEstablish.establish(ctc, NettyConnectionPool.this, new Runnable()
-                    {
-
-                        @Override
-                        public void run()
-                        {
-                            AvailableContext ac = null;
-                            if (ephemeral)
-                            {
-                                EphemeralReaper reaper = new EphemeralReaper(ephemeralLifespanMillis);
-                                ac = new AvailableContext(
-                                    System.currentTimeMillis() + ephemeralLifespanMillis,
-                                    ctc,
-                                    ephemeralLifespanMillis,
-                                    true,
-                                    decoupler.schedule(reaper, ephemeralLifespanMillis, TimeUnit.MILLISECONDS));
-
-                                reaper.context = ac;
-                                fireConnectionCreated(ctc, true);
-                                ephemeralContexts.add(ac);
-                            }
-                            else
-                            {
-                                ac = new AvailableContext(-1, ctc, -1, false, null);
-                                fireConnectionCreated(ctc, false);
-                                immortalContexts.add(ac);
-                            }
-                            contextToCarrier.put(ctc, ac);
-
-                            //
-                            // If there are requests pending that are off the decoupler then
-                            // put the first one in the deque back on the decoupler before exiting.
-                            //
-
-                            connectionsInProgress.remove(OpenConnection.this);
-
-                            if (obtainLease != null)
-                            {
-                                obtainLease.run();
-                            }
-                            else
-                            {
-
-                                pollNextRequestOntoDecoupler();
-                            }
-                        }
-                    });
-
-
-                }
-                else
-                {
-                    //
-                    // Connection opening failed.
-                    //
-                    connectionsInProgress.remove(OpenConnection.this);
-                    if (obtainLease != null)
-                    {
-                        leasesRequired.add(obtainLease); // Put it back on the request list.
                     }
+                });
 
-                }
+
+//
 
             }
-            catch (InterruptedException iex)
+            catch (Exception iex)
             {
                 //TODO decide if we interrupt the decoupler.. probably not.
                 poolExceptionHandler.handleException(iex);
@@ -693,11 +709,11 @@ public class NettyConnectionPool implements PoolProvider
             // Can we satisfy this immediately
             //
 
-            AvailableContext ac = applyPreLease(immortalContexts,userObject);   // From immortals.
+            AvailableContext ac = applyPreLease(immortalContexts, userObject);   // From immortals.
 
             if (ac == null)
             {
-                ac = applyPreLease(ephemeralContexts,userObject); // From ephemeral.
+                ac = applyPreLease(ephemeralContexts, userObject); // From ephemeral.
             }
 
 
