@@ -23,6 +23,7 @@ import au.org.r358.poolnetty.common.*;
 import au.org.r358.poolnetty.pool.NettyConnectionPool;
 import au.org.r358.poolnetty.pool.NettyConnectionPoolBuilder;
 import au.org.r358.poolnetty.test.simpleserver.*;
+import au.org.r358.poolnetty.test.simpleserver.util.TestUtil;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;

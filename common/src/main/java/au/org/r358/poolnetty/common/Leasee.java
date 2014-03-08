@@ -19,13 +19,28 @@
 
 package au.org.r358.poolnetty.common;
 
+import au.org.r358.poolnetty.common.concurrent.ValueEvent;
 import au.org.r358.poolnetty.common.exceptions.PoolProviderException;
+
+import java.util.concurrent.FutureTask;
 
 /**
  *
  */
 public interface Leasee
 {
+    /**
+     * Cause channel to be yielded.
+     *
+     * @throws PoolProviderException
+     */
     void yield()
         throws PoolProviderException;
+
+    /**
+     * Run when the lease expires.
+     *
+     * @param task The task.
+     */
+    void onLeaseExpire(ValueEvent<Leasee> callThis);
 }

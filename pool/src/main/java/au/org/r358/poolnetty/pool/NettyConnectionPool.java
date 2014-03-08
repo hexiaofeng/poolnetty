@@ -32,7 +32,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  *
  */
-public class NettyConnectionPool implements PoolProvider
+public class NettyConnectionPool
+    implements PoolProvider
 {
 
     /**
@@ -47,7 +48,7 @@ public class NettyConnectionPool implements PoolProvider
     protected final PreReturnToPool preReturnToPool;
     protected final BootstrapProvider bootstrapProvider;
     protected final PoolExceptionHandler poolExceptionHandler;
-    protected final ExpiryReaper expiryReaper;
+    protected final LeaseExpiryReaper leaseExpiryReaper;
     protected final PostConnectEstablish postConnectEstablish;
 
     protected final int immortalCount;
@@ -101,7 +102,7 @@ public class NettyConnectionPool implements PoolProvider
         PreReturnToPool preReturnToPool,
         BootstrapProvider bootstrapProvider,
         PoolExceptionHandler poolExceptionHandler,
-        ExpiryReaper expiryReaper,
+        LeaseExpiryReaper leaseExpiryReaper,
         PostConnectEstablish postConnectEstablish,
         int immortalCount,
         int maxEphemeralCount,
@@ -114,7 +115,7 @@ public class NettyConnectionPool implements PoolProvider
         this.preReturnToPool = preReturnToPool;
         this.bootstrapProvider = bootstrapProvider;
         this.poolExceptionHandler = poolExceptionHandler;
-        this.expiryReaper = expiryReaper;
+        this.leaseExpiryReaper = leaseExpiryReaper;
         this.postConnectEstablish = postConnectEstablish;
         this.immortalCount = immortalCount;
         this.maxEphemeralCount = maxEphemeralCount;
@@ -156,8 +157,8 @@ public class NettyConnectionPool implements PoolProvider
 
         try
         {
-            Channel ch = ol.get().getChannel();
-            return new LeasedChannel(ch, this, userObject);
+            return new LeasedChannel(ol.get(), ol.get().getChannel(), NettyConnectionPool.this, userObject);
+            //return new LeasedChannel(ch, this, userObject);
         }
         catch (InterruptedException e)
         {
@@ -174,13 +175,16 @@ public class NettyConnectionPool implements PoolProvider
     public void yield(Channel ch)
         throws PoolProviderException
     {
-
+        final Channel channel;
         if (ch instanceof LeasedChannel)
         {
-            ch = ((LeasedChannel)ch).getInner();
+            channel = ((LeasedChannel)ch).getInner();
+        }
+        else
+        {
+            channel = ch;
         }
 
-        final Channel channel = ch;
 
         decoupler.execute(new Runnable()
         {
@@ -231,7 +235,7 @@ public class NettyConnectionPool implements PoolProvider
                 }
                 else
                 {
-                    poolExceptionHandler.handleException(new PoolProviderException("Unknown channel, has the lease expired.?"));
+                    poolExceptionHandler.handleException(new PoolProviderException("Unknown channel, has the lease expired?"));
                 }
             }
         });
@@ -252,7 +256,7 @@ public class NettyConnectionPool implements PoolProvider
                 {
                     new OpenConnection(false, null).run();
                 }
-
+                setupHarvester();
                 fireStarted();
 
             }
@@ -320,7 +324,7 @@ public class NettyConnectionPool implements PoolProvider
             @Override
             public void run()
             {
-                List<LeasedContext> toBeExpired = expiryReaper.reapHarvest(leasedContexts);
+                List<LeasedContext> toBeExpired = leaseExpiryReaper.reapHarvest(leasedContexts);
 
                 //
                 // Go through to be expired list, check they are actually leased and apply the leaseExpiryHandler to each.
@@ -331,16 +335,24 @@ public class NettyConnectionPool implements PoolProvider
                     {
                         if (leasedContextSet.contains(lc))
                         {
+                            //
+                            // Notify lease expired.
+                            //
+                            fireLeaseExpired(NettyConnectionPool.this, lc.getChannel(), lc.getUserObject());
+
+                            lc.fireExpired();
+
+
                             if (leaseExpiredHandler.closeExpiredLease(lc, NettyConnectionPool.this))
                             {
 
+
                                 //
-                                // Force closure of the context.
+                                // Force closure of the context if handler directs it.
                                 //
 
                                 leasedContexts.remove(lc);
                                 leasedContexts.remove(lc);
-                                fireLeaseExpired(NettyConnectionPool.this, lc.getChannel(), lc.getUserObject());
                                 decoupler.execute(new CloseContext(lc.getChannel()));
                             }
                         }
@@ -464,7 +476,8 @@ public class NettyConnectionPool implements PoolProvider
     }
 
 
-    private class EphemeralReaper implements Runnable
+    private class EphemeralReaper
+        implements Runnable
     {
 
         private final int lifespan;
@@ -493,7 +506,8 @@ public class NettyConnectionPool implements PoolProvider
     /**
      * Open a connection.
      */
-    private class OpenConnection implements Runnable
+    private class OpenConnection
+        implements Runnable
     {
 
 
@@ -664,7 +678,8 @@ public class NettyConnectionPool implements PoolProvider
     /**
      * Obtain a lease deferrable task.
      */
-    private class ObtainLease extends DeferrableTask<LeasedContext>
+    private class ObtainLease
+        extends DeferrableTask<LeasedContext>
     {
         private final long leaseTime;
         private final TimeUnit units;
@@ -731,7 +746,14 @@ public class NettyConnectionPool implements PoolProvider
                 }
                 else
                 {
-                    LeasedContext lc = new LeasedContext(leaseIdCounter++, System.currentTimeMillis() + units.toMillis(leaseTime), ac.getChannel(), !ac.isImmortal(), userObject, ac.getLifespan());
+                    LeasedContext lc = new LeasedContext(
+                        leaseIdCounter++,
+                        System.currentTimeMillis() + units.toMillis(leaseTime),
+                        ac.getChannel(),
+                        !ac.isImmortal(),
+                        userObject, ac.getLifespan()
+                    );
+
                     leasedContexts.add(lc);
                     leasedContextSet.add(lc);
                     contextToCarrier.put(lc.getChannel(), lc);
@@ -751,7 +773,7 @@ public class NettyConnectionPool implements PoolProvider
                     //
                     if (leaseFuture != null)
                     {
-                        leaseFuture.setValue(new LeasedChannel(lc.getChannel(), NettyConnectionPool.this, userObject));
+                        leaseFuture.setValue(new LeasedChannel(lc, lc.getChannel(), NettyConnectionPool.this, userObject));
                     }
 
                     return false; // Lease granted.
@@ -794,7 +816,8 @@ public class NettyConnectionPool implements PoolProvider
     /**
      * Called when writability changes.
      */
-    private class WritabilityChanged implements Runnable
+    private class WritabilityChanged
+        implements Runnable
     {
 
         private final Channel channel;
@@ -822,12 +845,14 @@ public class NettyConnectionPool implements PoolProvider
     /**
      * Close a channel task
      */
-    private class CloseContext implements Runnable
+    private class CloseContext
+        implements Runnable
     {
         private Channel ctx;
 
         public CloseContext(Channel ctx)
         {
+
             this.ctx = ctx;
         }
 
@@ -846,8 +871,25 @@ public class NettyConnectionPool implements PoolProvider
                 leasedContextSet.remove(o);
             }
 
-            ctx.close();
-            fireConnectionClosed(ctx);
+
+            if (ctx.isOpen())
+            {
+                ctx.close().syncUninterruptibly().addListener(new ChannelFutureListener()
+                {
+                    @Override
+                    public void operationComplete(ChannelFuture future)
+                        throws Exception
+                    {
+                        fireConnectionClosed(ctx);
+                    }
+                });
+            }
+            else
+            {
+                fireConnectionClosed(ctx);
+            }
+
+
         }
     }
 
@@ -855,7 +897,8 @@ public class NettyConnectionPool implements PoolProvider
     /**
      * Called when the channel becomes inactive..
      */
-    private class ChannelInactive implements Runnable
+    private class ChannelInactive
+        implements Runnable
     {
         private final Channel ctx;
 
@@ -871,7 +914,8 @@ public class NettyConnectionPool implements PoolProvider
         }
     }
 
-    private class ShutdownTask implements Runnable
+    private class ShutdownTask
+        implements Runnable
     {
         @Override
         public void run()
@@ -919,7 +963,8 @@ public class NettyConnectionPool implements PoolProvider
     /**
      * A future for lease requests.
      */
-    private class LeaseFuture implements Future<LeasedChannel>
+    private class LeaseFuture
+        implements Future<LeasedChannel>
     {
 
         private final AtomicBoolean cancel = new AtomicBoolean(false);

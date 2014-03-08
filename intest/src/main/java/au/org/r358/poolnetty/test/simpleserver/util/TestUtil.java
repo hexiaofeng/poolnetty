@@ -1,4 +1,4 @@
-package au.org.r358.poolnetty.test.simpleserver;
+package au.org.r358.poolnetty.test.simpleserver.util;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -41,4 +41,16 @@ public class TestUtil
         return m.invoke(source, params);
     }
 
+    public static void setField(Object source, String fieldName, Object value)
+        throws Exception
+    {
+        Class cl = source.getClass();
+
+
+        Field f = cl.getDeclaredField(fieldName);
+        f.setAccessible(true);
+
+        f.set(source, value);
+
+    }
 }

@@ -19,6 +19,7 @@
 
 package au.org.r358.poolnetty.common;
 
+import au.org.r358.poolnetty.common.concurrent.ValueEvent;
 import io.netty.channel.Channel;
 
 /**
@@ -28,16 +29,19 @@ public class LeasedContext
 {
     private final long leaseID;
     private final long expireAfter;
-    private final Channel channelHandlerContext;
+    private final Channel leasedChannel;
     private final boolean immortal;
     private final int channelLifespan;
     private final Object userObject;
 
-    public LeasedContext(long leaseID, long expireAfter, Channel channelHandlerContext, boolean ephemeral, Object userObject, int channelLifespan)
+    private Runnable expirationRunnable;
+
+
+    public LeasedContext(long leaseID, long expireAfter, Channel leasedChannel, boolean ephemeral, Object userObject, int channelLifespan)
     {
         this.leaseID = leaseID;
         this.expireAfter = expireAfter;
-        this.channelHandlerContext = channelHandlerContext;
+        this.leasedChannel = leasedChannel;
         this.immortal = ephemeral;
         this.userObject = userObject;
         this.channelLifespan = channelLifespan;
@@ -55,7 +59,7 @@ public class LeasedContext
 
     public Channel getChannel()
     {
-        return channelHandlerContext;
+        return leasedChannel;
     }
 
     public long getLeaseID()
@@ -99,7 +103,7 @@ public class LeasedContext
         {
             return false;
         }
-        if (channelHandlerContext != null ? !channelHandlerContext.equals(that.channelHandlerContext) : that.channelHandlerContext != null)
+        if (leasedChannel != null ? !leasedChannel.equals(that.leasedChannel) : that.leasedChannel != null)
         {
             return false;
         }
@@ -116,7 +120,7 @@ public class LeasedContext
     {
         int result = (int)(leaseID ^ (leaseID >>> 32));
         result = 31 * result + (int)(expireAfter ^ (expireAfter >>> 32));
-        result = 31 * result + (channelHandlerContext != null ? channelHandlerContext.hashCode() : 0);
+        result = 31 * result + (leasedChannel != null ? leasedChannel.hashCode() : 0);
         result = 31 * result + (immortal ? 1 : 0);
         result = 31 * result + (userObject != null ? userObject.hashCode() : 0);
         return result;
@@ -126,5 +130,18 @@ public class LeasedContext
     public boolean expiredLease(long zeit)
     {
         return zeit > expireAfter;
+    }
+
+    public void fireExpired()
+    {
+        if (expirationRunnable != null)
+        {
+            expirationRunnable.run();
+        }
+    }
+
+    public void setExpirationRunnable(Runnable runnable)
+    {
+        this.expirationRunnable = runnable;
     }
 }

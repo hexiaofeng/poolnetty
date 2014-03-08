@@ -21,7 +21,6 @@ package au.org.r358.poolnetty.pool;
 
 import au.org.r358.poolnetty.common.*;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 
 /**
  * Builds the connection pool.
@@ -38,7 +37,7 @@ public class NettyConnectionPoolBuilder
     protected PreReturnToPool preReturnToPool;
     protected BootstrapProvider bootstrapProvider;
     protected PoolExceptionHandler poolExceptionHandler;
-    protected ExpiryReaper expiryReaper;
+    protected LeaseExpiryReaper leaseExpiryReaper;
     protected PostConnectEstablish postConnectEstablish;
     protected String inboundHandlerName = "_pool";
 
@@ -49,6 +48,10 @@ public class NettyConnectionPoolBuilder
     protected int reaperIntervalMillis = 15000;
 
 
+    public NettyConnectionPoolBuilder() {
+
+    }
+
     public NettyConnectionPoolBuilder(int immortalCount, int maxEphemeralCount, int ephemeralLifespanMillis)
     {
         this.immortalCount = immortalCount;
@@ -56,15 +59,34 @@ public class NettyConnectionPoolBuilder
         this.ephemeralLifespanMillis = ephemeralLifespanMillis;
     }
 
+    public NettyConnectionPoolBuilder withImmortalCount(int immortalCount)
+    {
+        this.immortalCount = immortalCount;
+        return this;
+    }
+
+    public NettyConnectionPoolBuilder withMaxEphemeralCount(int maxEphemeralCount)
+    {
+        this.maxEphemeralCount = maxEphemeralCount;
+        return this;
+    }
+
+    public NettyConnectionPoolBuilder withEphemeralLifespanMillis(int ephemeralLifespanMillis)
+    {
+        this.ephemeralLifespanMillis = ephemeralLifespanMillis;
+        return this;
+    }
+
+
     public NettyConnectionPoolBuilder withPostConnectEstablish(PostConnectEstablish postConnectEstablish)
     {
         this.postConnectEstablish = postConnectEstablish;
         return this;
     }
 
-    public NettyConnectionPoolBuilder withExpiryHarvester(ExpiryReaper expiryReaper)
+    public NettyConnectionPoolBuilder withLeaseExpiryHarvester(LeaseExpiryReaper leaseExpiryReaper)
     {
-        this.expiryReaper = expiryReaper;
+        this.leaseExpiryReaper = leaseExpiryReaper;
         return this;
     }
 
@@ -226,7 +248,7 @@ public class NettyConnectionPoolBuilder
             preReturnToPool,
             bootstrapProvider,
             poolExceptionHandler,
-            expiryReaper,
+            leaseExpiryReaper,
             postConnectEstablish,
             immortalCount,
             maxEphemeralCount,

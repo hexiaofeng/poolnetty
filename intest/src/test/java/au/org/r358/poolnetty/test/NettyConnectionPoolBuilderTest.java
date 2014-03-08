@@ -3,10 +3,9 @@ package au.org.r358.poolnetty.test;
 import au.org.r358.poolnetty.common.*;
 import au.org.r358.poolnetty.pool.NettyConnectionPool;
 import au.org.r358.poolnetty.pool.NettyConnectionPoolBuilder;
-import au.org.r358.poolnetty.test.simpleserver.TestUtil;
+import au.org.r358.poolnetty.test.simpleserver.util.TestUtil;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
 import junit.framework.TestCase;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -38,7 +37,7 @@ public class NettyConnectionPoolBuilderTest
 
         nt.withPostConnectEstablish(pce);
 
-        ExpiryReaper expH = new ExpiryReaper()
+        LeaseExpiryReaper expH = new LeaseExpiryReaper()
         {
             @Override
             public List<LeasedContext> reapHarvest(List<LeasedContext> currentLeases)
@@ -47,7 +46,7 @@ public class NettyConnectionPoolBuilderTest
             }
         };
 
-        nt.withExpiryHarvester(expH);
+        nt.withLeaseExpiryHarvester(expH);
 
         BootstrapProvider bsp = new BootstrapProvider()
         {
@@ -136,7 +135,7 @@ public class NettyConnectionPoolBuilderTest
         NettyConnectionPool ncp = nt.build();
 
         TestCase.assertEquals(pce, TestUtil.getField(ncp, "postConnectEstablish"));
-        TestCase.assertEquals(expH, TestUtil.getField(ncp, "expiryReaper"));
+        TestCase.assertEquals(expH, TestUtil.getField(ncp, "leaseExpiryReaper"));
         TestCase.assertEquals(bsp, TestUtil.getField(ncp, "bootstrapProvider"));
         TestCase.assertEquals(peh, TestUtil.getField(ncp, "poolExceptionHandler"));
         TestCase.assertEquals(cip, TestUtil.getField(ncp, "connectionInfoProvider"));

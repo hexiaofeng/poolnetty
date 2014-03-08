@@ -19,6 +19,7 @@
 
 package au.org.r358.poolnetty.common;
 
+import au.org.r358.poolnetty.common.concurrent.ValueEvent;
 import au.org.r358.poolnetty.common.exceptions.PoolProviderException;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.*;
@@ -30,18 +31,33 @@ import java.net.SocketAddress;
 /**
  *
  */
-public class LeasedChannel implements Channel,
+public class LeasedChannel
+    implements Channel,
     Leasee
 {
     private final Channel inner;
     private final PoolProvider poolProvider;
     private final Object userObject;
+    private ValueEvent<Leasee> leaseExpirationCallback;
+    private final LeasedContext owningContext;
 
-    public LeasedChannel(Channel inner, PoolProvider provider, Object userObject)
+    public LeasedChannel(LeasedContext owningContext,  Channel inner, PoolProvider provider, Object userObject)
     {
+        this.owningContext = owningContext;
         this.inner = inner;
         this.poolProvider = provider;
         this.userObject = userObject;
+        this.owningContext.setExpirationRunnable(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                if (leaseExpirationCallback != null)
+                {
+                    leaseExpirationCallback.on(LeasedChannel.this);
+                }
+            }
+        });
     }
 
 
@@ -286,6 +302,12 @@ public class LeasedChannel implements Channel,
         poolProvider.yield(inner);
     }
 
+    @Override
+    public void onLeaseExpire(ValueEvent<Leasee> callThis)
+    {
+        this.leaseExpirationCallback = callThis;
+    }
+
     /**
      * The actual inner channel this object wraps.
      *
@@ -300,4 +322,13 @@ public class LeasedChannel implements Channel,
     {
         return userObject;
     }
+
+    public void fireExpired()
+    {
+        if (leaseExpirationCallback != null)
+        {
+            leaseExpirationCallback.on(this);
+        }
+    }
+
 }

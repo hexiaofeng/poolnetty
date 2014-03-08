@@ -17,38 +17,24 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package au.org.r358.poolnetty.pool.reaper;
+package au.org.r358.poolnetty.common;
 
-import au.org.r358.poolnetty.common.ExpiryReaper;
-import au.org.r358.poolnetty.common.LeasedContext;
-
-import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Very simple reaper that considers the whole lease list in one pass.
+ * Implementations of this class are responsible for reaping expired leases.
+ * <p>Consider how your implementation will function id there are 1000's of leases.</p>
  */
-public class FullPassSimpleReaper implements ExpiryReaper
+public interface LeaseExpiryReaper
 {
-    @Override
-    public List<LeasedContext> reapHarvest(List<LeasedContext> currentLeases)
-    {
-        long zeit = System.currentTimeMillis();
-        List<LeasedContext> toBeExpired = null;
-        for (LeasedContext lc : currentLeases)
-        {
-            if (lc.expiredLease(zeit))
-            {
-                if (toBeExpired == null)
-                {
-                    toBeExpired = new ArrayList<>();
-                }
 
-                toBeExpired.add(lc);
+    /**
+     * Reap the harvest.
+     *
+     * @param currentLeases List of current leases.
+     * @return A List of leases to be reaped.
+     */
+    List<LeasedContext> reapHarvest(List<LeasedContext> currentLeases);
 
-            }
-        }
 
-        return toBeExpired;
-    }
 }
