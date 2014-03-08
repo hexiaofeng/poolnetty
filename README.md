@@ -5,8 +5,8 @@ Netty client connection pooling.
 
 State:
 ------
-23-Feb-2014 - Under development but for the adventurous there is code that can be run but no stability guarantees are
-given. A lot of it is typed in but the test coverage is way down. (This is not a release.)
+08-Mar-2014 - Under development but for the adventurous there is code that can be run but no stability guarantees are
+given. The test coverage is only 76%. (This is not a release.)
 
 
 Building:
