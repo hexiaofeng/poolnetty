@@ -5,8 +5,7 @@ Netty client connection pooling.
 
 State:
 ------
-08-Mar-2014 - Under development but for the adventurous there is code that can be run but no stability guarantees are
-given. The test coverage is only 76%. (This is not a release.)
+08-Mar-2014 - Heading towards a release, just sorting out the mechanics with Sonatype re pushing to mvn central, (which is a first for me). The code is usable, just need to add more javadoc and get it pushed to central.
 
 
 Building:
