@@ -93,6 +93,12 @@ public class ConnectionEstablishPhaseTest
             }
 
             @Override
+            public void leaseCanceled(PoolProvider provider, Object userObject)
+            {
+
+            }
+
+            @Override
             public void leaseYield(PoolProvider provider, Channel channel, Object userObject)
             {
                 leaseYieldedLatch.countDown();
@@ -209,7 +215,7 @@ public class ConnectionEstablishPhaseTest
         ncp.addListener(ppl);
 
 
-        ncp.start();
+        ncp.start(0, TimeUnit.SECONDS);
         TestCase.assertTrue("Opening connection..", connectionOpenedLatch.await(5, TimeUnit.SECONDS));
         TestCase.assertTrue("Not started..", startedLatch.await(5, TimeUnit.SECONDS));
 

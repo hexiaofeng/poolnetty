@@ -26,6 +26,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
 import java.nio.charset.Charset;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * Simple server used as an end point in testing.
@@ -117,10 +118,23 @@ public class SimpleServer implements Runnable
 
 
     public void stop()
+        throws Exception
     {
+        final CountDownLatch cl = new CountDownLatch(1);
         if (channelFuture != null)
         {
-            channelFuture.channel().close().syncUninterruptibly();
+            channelFuture.channel().close().addListener(new ChannelFutureListener()
+            {
+                @Override
+                public void operationComplete(ChannelFuture future)
+                    throws Exception
+                {
+                    cl.countDown();
+                }
+            });
         }
+
+        cl.await();
+
     }
 }

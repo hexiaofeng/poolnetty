@@ -7,6 +7,7 @@ import io.netty.channel.Channel;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  *
@@ -23,6 +24,8 @@ public class TestPoolProviderListener
     private CountDownLatch connectionClosed = new CountDownLatch(1);
     private CountDownLatch connectionCreated = new CountDownLatch(1);
     private CountDownLatch ephemeralReaped = new CountDownLatch(1);
+    private CountDownLatch leaseCanceled = new CountDownLatch(1);
+    private AtomicReference<Object> canceledUserObject = new AtomicReference<>();
 
     private ConcurrentLinkedQueue<Object[]> journal = new ConcurrentLinkedQueue<>();
 
@@ -59,6 +62,13 @@ public class TestPoolProviderListener
     {
         journal.add(new Object[]{Event.LeaseGranted, provider, channel, userObject});
         leaseGranted.countDown();
+    }
+
+    @Override
+    public void leaseCanceled(PoolProvider provider, Object userObject)
+    {
+        canceledUserObject.set(userObject);
+        leaseCanceled.countDown();
     }
 
     @Override
@@ -194,5 +204,15 @@ public class TestPoolProviderListener
     public void setJournal(ConcurrentLinkedQueue<Object[]> journal)
     {
         this.journal = journal;
+    }
+
+    public CountDownLatch getLeaseCanceled()
+    {
+        return leaseCanceled;
+    }
+
+    public AtomicReference<Object> getCanceledUserObject()
+    {
+        return canceledUserObject;
     }
 }

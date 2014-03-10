@@ -63,6 +63,9 @@ public interface PoolProviderListener
     void leaseGranted(PoolProvider provider, Channel channel, Object userObject);
 
 
+    void leaseCanceled(PoolProvider provider, Object userObject);
+
+
     /**
      * Called when a lease is yielded.
      *

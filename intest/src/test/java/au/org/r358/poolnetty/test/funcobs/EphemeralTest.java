@@ -122,6 +122,12 @@ public class EphemeralTest
             }
 
             @Override
+            public void leaseCanceled(PoolProvider provider, Object userObject)
+            {
+
+            }
+
+            @Override
             public void leaseYield(PoolProvider provider, Channel channel, Object userObject)
             {
 
@@ -239,7 +245,7 @@ public class EphemeralTest
         ncp.addListener(ppl);
 
 
-        ncp.start();
+        ncp.start(0, TimeUnit.SECONDS);
         //
         // Should start as normal but with no immortal connections made.
         //

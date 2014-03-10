@@ -43,9 +43,9 @@ dependencies {
 }
 
 allprojects {
-    apply plugin: 'idea'
-    apply plugin: 'eclipse'
     apply plugin: 'java'
+    apply plugin: 'maven'
+    apply plugin: 'signing'
 
     configurations {
         codeCoverage
@@ -59,6 +59,10 @@ allprojects {
         compile fileTree(dir: new File(rootDir, 'libs'), include: '*.jar')
         compile 'org.jacoco:org.jacoco.agent:0.6.2.201302030002'
         codeCoverage group: 'org.jacoco', name: 'org.jacoco.agent', version: '0.6.2.201302030002', classifier: 'runtime'
+    }
+
+    signing {
+        sign configurations.archives
     }
 
     test {
@@ -92,8 +96,8 @@ subprojects {
         compile 'io.netty:netty-all:4.0.11.Final'
     }
 
-    version = '0.0.1-ALPHA'
-    group = 'au.r358'
+    version = '0.0.1'
+    group = 'au.org.r358'
     
     jar {
         manifest.attributes provider: 'gradle'
@@ -126,8 +130,56 @@ project(':pool') {
     }
 }
 
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from 'build/docs/javadoc'
+}
 
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allSource
+    classifier = 'sources'
+}
 
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+            repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+                authentication(userName: sonatypeUsername, password: sonatypePassword)
+            }
+
+            pom.project {
+                name 'PoolNetty'
+                packaging 'jar'
+                description 'Connection pooling for netty.'
+                url 'http://gradlefx.github.com/'
+
+                scm {
+                    url 'scm:git@github.com:R358/poolnetty.git'
+                    connection 'scm:git@github.com:R358/poolnetty.git'
+                    developerConnection 'git@github.com:R358/poolnetty.git'
+                }
+
+                licenses {
+                    license {
+                        name 'BSD'
+                        url 'https://github.com/R358/poolnetty/blob/master/LICENSE.md'
+                        distribution 'repo'
+                    }
+                }
+
+                developers {
+                    developer {
+                        id 'meganwoods'
+                        name 'Megan Woods'
+                    }
+
+                }
+            }
+        }
+    }
+}
 
 
 task coverage_report(dependsOn: 'test') << {

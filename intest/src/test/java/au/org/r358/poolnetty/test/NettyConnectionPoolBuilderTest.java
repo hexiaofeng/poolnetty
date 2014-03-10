@@ -1,6 +1,7 @@
 package au.org.r358.poolnetty.test;
 
 import au.org.r358.poolnetty.common.*;
+import au.org.r358.poolnetty.common.concurrent.Completion;
 import au.org.r358.poolnetty.pool.NettyConnectionPool;
 import au.org.r358.poolnetty.pool.NettyConnectionPoolBuilder;
 import au.org.r358.poolnetty.test.simpleserver.util.TestUtil;
@@ -29,9 +30,9 @@ public class NettyConnectionPoolBuilderTest
         PostConnectEstablish pce = new PostConnectEstablish()
         {
             @Override
-            public void establish(Channel ctx, PoolProvider provider, Runnable completeTask)
+            public void establish(Channel channel, PoolProvider provider, Completion completion)
             {
-
+                completion.complete();
             }
         };
 

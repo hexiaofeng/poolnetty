@@ -66,7 +66,8 @@ public interface PoolProvider
     void yield(Channel channel)
         throws PoolProviderException;
 
-    void start()
+
+    boolean start(long timeToWait, TimeUnit timeUnit)
         throws Exception;
 
     void stop(boolean force);

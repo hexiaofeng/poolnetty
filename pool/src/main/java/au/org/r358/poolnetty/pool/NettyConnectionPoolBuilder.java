@@ -20,6 +20,7 @@
 package au.org.r358.poolnetty.pool;
 
 import au.org.r358.poolnetty.common.*;
+import au.org.r358.poolnetty.common.concurrent.Completion;
 import io.netty.channel.Channel;
 
 /**
@@ -48,7 +49,8 @@ public class NettyConnectionPoolBuilder
     protected int reaperIntervalMillis = 15000;
 
 
-    public NettyConnectionPoolBuilder() {
+    public NettyConnectionPoolBuilder()
+    {
 
     }
 
@@ -208,7 +210,7 @@ public class NettyConnectionPoolBuilder
             preReturnToPool = new PreReturnToPool()
             {
                 @Override
-                public boolean returnToPoolOrDisposeNow(Channel context, PoolProvider provider,Object userObject)
+                public boolean returnToPoolOrDisposeNow(Channel context, PoolProvider provider, Object userObject)
                 {
                     return true;
                 }
@@ -231,12 +233,14 @@ public class NettyConnectionPoolBuilder
         {
             postConnectEstablish = new PostConnectEstablish()
             {
+
                 @Override
-                public void establish(Channel ctx, PoolProvider provider, Runnable completeTask)
+                public void establish(Channel channel, PoolProvider provider, Completion completion)
                 {
-                    provider.execute(completeTask);
+                    completion.complete();
                 }
             };
+
         }
 
 

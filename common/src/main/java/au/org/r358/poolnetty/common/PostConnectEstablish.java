@@ -19,6 +19,7 @@
 
 package au.org.r358.poolnetty.common;
 
+import au.org.r358.poolnetty.common.concurrent.Completion;
 import io.netty.channel.Channel;
 
 
@@ -26,28 +27,33 @@ import io.netty.channel.Channel;
  * Called once the connection is finished, that is after a connection is made and the pipeline is in place.
  * <p/>
  * At this point you can asynchronously do whatever needs to be done, like logging into a DB and so on.
- * When complete, you need to put the completeTask on the pool providers decoupler thread.
+ * When complete, you need to call context.complete().
  * Example:
  * <code>
- * public void establish(Channel channel, PoolProvider provider, Runnable completeTask) {
- * // Do stuff to channel, send messages, negotiate with other end etc.
- * // Then when all that is done you must ensure the completeTask is executed by the pool provider.
- * provider.execute(completeTask)
+ * public void establish(PostConnectEstablish context, Channel channel, PoolProvider provider) {
+ * // Manipulate the channel, send messages, negotiate with other end etc.
+ * // Then when all that is done you must ensure that context.complete().
+ * context.complete();
  * }
  * </code>
  */
 public interface PostConnectEstablish
 {
+
+
     /**
      * This is your notification to perform any completion required for the connection, at this point the pipeline has already been established.
      * This phase can be used to do things like "log into a db" etc.
      * <p/>
-     * This method is called on the pools decoupler and it is advisable for you to complete this phase asynchronously.
-     * When you are complete, place the Runnable from completeTask onto the pool providers decoupler.
+     * <p>This method is called on the pools decoupler and it is advisable for you to complete this phase asynchronously.</p>
+     * <p>When you are complete call the context.completed().</p>
+     * <p>If you do not call completed() this connection will not be added to the pool.</p>
      *
-     * @param channel      The channel.
-     * @param provider     The provider.
-     * @param completeTask The task to put back on the providers decoupler via provider.execute(completeTask)
+     * @param channel    The channel.
+     * @param provider   The provider.
+     * @param completion The completion notifier.
      */
-    void establish(Channel channel, PoolProvider provider, Runnable completeTask);
+    void establish(Channel channel, PoolProvider provider, Completion completion);
+
+
 }

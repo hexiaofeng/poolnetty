@@ -52,7 +52,6 @@ import java.util.concurrent.atomic.AtomicReference;
 public class AsyncLeaseTest
 {
 
-
     @Test
     public void testWithCallbackListener()
         throws Exception
@@ -102,6 +101,12 @@ public class AsyncLeaseTest
             {
                 leaseGrantedLatch.countDown();
                 listOfUserObjectReports.add(userObject.toString() + ".granted");
+            }
+
+            @Override
+            public void leaseCanceled(PoolProvider provider, Object userObject)
+            {
+
             }
 
             @Override
@@ -221,7 +226,8 @@ public class AsyncLeaseTest
         ncp.addListener(ppl);
 
 
-        ncp.start();
+        ncp.start(0, TimeUnit.SECONDS);
+
         TestCase.assertTrue("Opening connection..", connectionOpenedLatch.await(5, TimeUnit.SECONDS));
         TestCase.assertTrue("Not started..", startedLatch.await(5, TimeUnit.SECONDS));
 
@@ -382,6 +388,12 @@ public class AsyncLeaseTest
             }
 
             @Override
+            public void leaseCanceled(PoolProvider provider, Object userObject)
+            {
+
+            }
+
+            @Override
             public void leaseYield(PoolProvider provider, Channel channel, Object userObject)
             {
                 leaseYieldedLatch.countDown();
@@ -498,7 +510,7 @@ public class AsyncLeaseTest
         ncp.addListener(ppl);
 
 
-        ncp.start();
+        ncp.start(0, TimeUnit.SECONDS);
         TestCase.assertTrue("Opening connection..", connectionOpenedLatch.await(5, TimeUnit.SECONDS));
         TestCase.assertTrue("Not started..", startedLatch.await(5, TimeUnit.SECONDS));
 
