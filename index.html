@@ -1,0 +1,284 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Poolnetty by R358</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Poolnetty</h1>
+        <p>Netty client pooling.</p>
+
+        <p class="view"><a href="https://github.com/R358/poolnetty">View the Project on GitHub <small>R358/poolnetty</small></a></p>
+
+
+        <ul>
+          <li><a href="https://github.com/R358/poolnetty/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/R358/poolnetty/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/R358/poolnetty">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h1>
+<a name="pool-netty" class="anchor" href="#pool-netty"><span class="octicon octicon-link"></span></a>Pool Netty</h1>
+
+<p>Netty client connection pooling.</p>
+
+<h2>
+<a name="state" class="anchor" href="#state"><span class="octicon octicon-link"></span></a>State:</h2>
+
+<p>08-Mar-2014 - Heading towards a release, just sorting out the mechanics with Sonatype re pushing to mvn central, (which is a first for me). The code is usable, just need to add more javadoc and get it pushed to central.</p>
+
+<h2>
+<a name="building" class="anchor" href="#building"><span class="octicon octicon-link"></span></a>Building:</h2>
+
+<p>Download and install <a href="http://www.gradle.org">Gradle</a></p>
+
+<p>To test and produce coverage report:</p>
+
+<pre><code>   gradle clean test coverage_report
+
+   # Build will print absolute path to coverage report, open it in your browser.
+
+</code></pre>
+
+<p>To clean and package:</p>
+
+<pre><code> gradle clean compilejava jar
+
+ # With archives in:
+
+ &lt;root&gt;/pool/build/libs
+ &lt;root&gt;/common/build/libs
+
+</code></pre>
+
+<h2>
+<a name="quick-start" class="anchor" href="#quick-start"><span class="octicon octicon-link"></span></a>Quick Start:</h2>
+
+<p>If your interested in testing it out then the following will help you.</p>
+
+<h3>
+<a name="basic-set-up" class="anchor" href="#basic-set-up"><span class="octicon octicon-link"></span></a>Basic set up.</h3>
+
+<div class="highlight highlight-java"><pre>
+ <span class="n">NettyConnectionPoolBuilder</span> <span class="n">ncb</span> <span class="o">=</span> <span class="k">new</span> <span class="n">NettyConnectionPoolBuilder</span><span class="o">(</span><span class="n">immortalCount</span><span class="o">,</span> <span class="n">maxEphemeral</span><span class="o">,</span> <span class="n">ephemeralLifespanMillis</span><span class="o">);</span>
+
+
+         <span class="kd">final</span> <span class="n">EventLoopGroup</span> <span class="n">elg</span> <span class="o">=</span> <span class="k">new</span> <span class="n">NioEventLoopGroup</span><span class="o">();</span>
+
+
+         <span class="c1">//</span>
+         <span class="c1">// Create the boot strap.</span>
+         <span class="c1">//</span>
+         <span class="n">ncb</span><span class="o">.</span><span class="na">withBootstrapProvider</span><span class="o">(</span><span class="k">new</span> <span class="n">BootstrapProvider</span><span class="o">()</span>
+         <span class="o">{</span>
+             <span class="nd">@Override</span>
+             <span class="kd">public</span> <span class="n">Bootstrap</span> <span class="nf">createBootstrap</span><span class="o">(</span><span class="n">PoolProvider</span> <span class="n">poolProvider</span><span class="o">)</span>
+             <span class="o">{</span>
+                 <span class="n">Bootstrap</span> <span class="n">bs</span> <span class="o">=</span> <span class="k">new</span> <span class="n">Bootstrap</span><span class="o">();</span>
+                 <span class="n">bs</span><span class="o">.</span><span class="na">group</span><span class="o">(</span><span class="n">elg</span><span class="o">);</span>
+                 <span class="n">bs</span><span class="o">.</span><span class="na">channel</span><span class="o">(</span><span class="n">NioSocketChannel</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+                 <span class="n">bs</span><span class="o">.</span><span class="na">option</span><span class="o">(</span><span class="n">ChannelOption</span><span class="o">.</span><span class="na">SO_KEEPALIVE</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
+                 <span class="n">bs</span><span class="o">.</span><span class="na">option</span><span class="o">(</span><span class="n">ChannelOption</span><span class="o">.</span><span class="na">AUTO_READ</span><span class="o">,</span> <span class="kc">true</span><span class="o">);</span>
+                 <span class="k">return</span> <span class="n">bs</span><span class="o">;</span>
+             <span class="o">}</span>
+         <span class="o">});</span>
+
+
+         <span class="c1">//</span>
+         <span class="c1">// Sets up the connection info and the channel initializer.</span>
+         <span class="c1">//</span>
+         <span class="n">ncb</span><span class="o">.</span><span class="na">withConnectionInfoProvider</span><span class="o">(</span><span class="k">new</span> <span class="n">ConnectionInfoProvider</span><span class="o">()</span>
+         <span class="o">{</span>
+             <span class="nd">@Override</span>
+             <span class="kd">public</span> <span class="n">ConnectionInfo</span> <span class="nf">connectionInfo</span><span class="o">(</span><span class="n">PoolProvider</span> <span class="n">poolProvider</span><span class="o">)</span>
+             <span class="o">{</span>
+
+                 <span class="k">return</span> <span class="k">new</span> <span class="nf">ConnectionInfo</span><span class="o">(</span><span class="k">new</span> <span class="n">InetSocketAddress</span><span class="o">(</span><span class="s">"127.0.0.1"</span><span class="o">,</span> <span class="mi">1887</span><span class="o">),</span> <span class="kc">null</span><span class="o">,</span> <span class="k">new</span> <span class="n">ChannelInitializer</span><span class="o">()</span>
+                 <span class="o">{</span>
+                     <span class="nd">@Override</span>
+                     <span class="kd">protected</span> <span class="kt">void</span> <span class="nf">initChannel</span><span class="o">(</span><span class="n">Channel</span> <span class="n">ch</span><span class="o">)</span>
+                         <span class="kd">throws</span> <span class="n">Exception</span>
+                     <span class="o">{</span>
+                         <span class="n">ch</span><span class="o">.</span><span class="na">pipeline</span><span class="o">().</span><span class="na">addLast</span><span class="o">(</span><span class="s">"decode"</span><span class="o">,</span> <span class="k">new</span> <span class="n">SimpleInboundHandler</span><span class="o">(</span><span class="mi">10</span><span class="o">));</span>
+                         <span class="n">ch</span><span class="o">.</span><span class="na">pipeline</span><span class="o">().</span><span class="na">addLast</span><span class="o">(</span><span class="s">"encode"</span><span class="o">,</span> <span class="k">new</span> <span class="n">SimpleOutboundHandler</span><span class="o">(</span><span class="mi">10</span><span class="o">));</span>
+                     <span class="o">}</span>
+                 <span class="o">});</span>
+
+
+             <span class="o">}</span>
+         <span class="o">});</span>
+
+
+         <span class="c1">//</span>
+         <span class="c1">// Make the pool add listener and start.</span>
+         <span class="c1">//</span>
+         <span class="n">NettyConnectionPool</span> <span class="n">ncp</span> <span class="o">=</span> <span class="n">ncb</span><span class="o">.</span><span class="na">build</span><span class="o">();</span>
+
+         <span class="c1">//</span>
+         <span class="c1">// Start the pool.</span>
+         <span class="c1">//</span>
+
+         <span class="n">ncp</span><span class="o">.</span><span class="na">start</span><span class="o">();</span>
+
+</pre></div>
+
+<h3>
+<a name="obtain-a-lease" class="anchor" href="#obtain-a-lease"><span class="octicon octicon-link"></span></a>Obtain a lease</h3>
+
+<p>There are three ways to obtain a lease.</p>
+
+<div class="highlight highlight-java"><pre>
+ <span class="c1">//</span>
+ <span class="c1">// Blocking</span>
+ <span class="c1">//</span>
+
+   <span class="n">LeasedChannel</span> <span class="n">chan</span> <span class="o">=</span> <span class="n">ncp</span><span class="o">.</span><span class="na">lease</span><span class="o">(</span><span class="mi">10</span><span class="o">,</span> <span class="n">TimeUnit</span><span class="o">.</span><span class="na">Seconds</span><span class="o">,</span> <span class="n">userObject</span><span class="o">);</span>
+
+ <span class="c1">//</span>
+ <span class="c1">// Using a future.</span>
+ <span class="c1">//</span>
+
+  <span class="n">Future</span><span class="o">&lt;</span><span class="n">LeasedChannel</span><span class="o">&gt;</span> <span class="n">chanFuture</span> <span class="o">=</span> <span class="n">ncp</span><span class="o">.</span><span class="na">leaseAsync</span><span class="o">(</span><span class="mi">10</span><span class="o">,</span> <span class="n">TimeUnit</span><span class="o">.</span><span class="na">DAYS</span><span class="o">,</span> <span class="n">userObject</span><span class="o">);</span>
+
+  <span class="c1">//</span>
+  <span class="c1">// Using a callback. (You also get back future.)</span>
+  <span class="c1">//</span>
+
+  <span class="n">ncp</span><span class="o">.</span><span class="na">leaseAsync</span><span class="o">(</span><span class="mi">10</span><span class="o">,</span> <span class="n">TimeUnit</span><span class="o">.</span><span class="na">DAYS</span><span class="o">,</span> <span class="n">userObject</span><span class="o">,</span> <span class="k">new</span> <span class="n">LeaseListener</span><span class="o">()</span>
+        <span class="o">{</span>
+            <span class="nd">@Override</span>
+            <span class="kd">public</span> <span class="kt">void</span> <span class="nf">leaseRequest</span><span class="o">(</span><span class="kt">boolean</span> <span class="n">success</span><span class="o">,</span> <span class="n">LeasedChannel</span> <span class="n">channel</span><span class="o">,</span> <span class="n">Throwable</span> <span class="n">th</span><span class="o">)</span>
+            <span class="o">{</span>
+              <span class="c1">// Do work..</span>
+            <span class="o">}</span>
+        <span class="o">});</span>
+
+
+</pre></div>
+
+<h3>
+<a name="canceling-lease-requests" class="anchor" href="#canceling-lease-requests"><span class="octicon octicon-link"></span></a>Canceling lease requests</h3>
+
+<p>You can call Future#cancel() and it will try to cancel the lease request on a best effort basis.</p>
+
+<h3>
+<a name="yield-a-lease" class="anchor" href="#yield-a-lease"><span class="octicon octicon-link"></span></a>Yield a lease</h3>
+
+<p>Yielding a lease means giving it back to the pool.</p>
+
+<div class="highlight highlight-java"><pre>
+ <span class="c1">//</span>
+ <span class="c1">// Directly back to the pool.</span>
+ <span class="c1">//</span>
+
+ <span class="n">ncp</span><span class="o">.</span><span class="na">yield</span><span class="o">(</span><span class="n">chan</span><span class="o">);</span>
+
+ <span class="c1">//</span>
+ <span class="c1">// From instances of LeasedChannel</span>
+ <span class="c1">//</span>
+
+
+ <span class="n">chan</span><span class="o">.</span><span class="na">yield</span><span class="o">();</span>
+
+</pre></div>
+
+<h2>
+<a name="interfaces" class="anchor" href="#interfaces"><span class="octicon octicon-link"></span></a>Interfaces</h2>
+
+<p>As Netty is so configurable, poolnetty provides a lot of options for configuration and customisation of the pools
+function.</p>
+
+<p><strong>Note:</strong>
+BootStrapProvider and ConnectionInfoProvider need to be implemented, all others have default implementations.</p>
+
+<table>
+<tr>
+<th>Interface</th>
+<th>Description</th>
+</tr>
+<tr>
+<td>BootstrapProvider</td>
+<td>Is called when making a connection to provide a configured bootstrap.</td>
+</tr>
+<tr>
+<td>ConnectionInfoProvider</td>
+<td>Is called when making a connection to supply the local and remote addresses and
+a channel initializer.</td>
+</tr>
+<tr>
+<td>ContextExceptionHandler</td>
+<td>Is called when a channel throws an exception, with the option of closing the channel.</td>
+</tr>
+<tr>
+<td>ExpiryReaper</td>
+<td>Implementations of this are called to nominate expired leases for later processing.</td>
+</tr>
+<tr>
+<td>LeaseExpiredHandler</td>
+<td>Is called on each expired lease and provides the option of terminating the channel.</td>
+</tr>
+<tr>
+<td>PoolExceptionHandler</td>
+<td>Exception emitted by netty or the pool are funneled through this.</td>
+</tr>
+<tr>
+<td>PoolProviderListener</td>
+<td>Pool listener.</td>
+</tr>
+<tr>
+<td>PostConnectEstablish</td>
+<td>Called once a connection is established and allows users to perform final setup
+of the connection. For example logging into the end service at the other end of the connection. Please see the Javadoc.</td>
+</tr>
+<tr>
+<td>PreGrantLease</td>
+<td>Gives users the ability to block the granting of a lease.</td>
+</tr>
+<tr>
+<td>PreReturnToPool</td>
+<td>Gives users the chance to make closure decisions on a channel as it returns to the pool.</td>
+</tr>
+</table><h2>
+<a name="notes-on-threading" class="anchor" href="#notes-on-threading"><span class="octicon octicon-link"></span></a>Notes on threading</h2>
+
+<p>The Pool Provider is a decoupled implementation where a single executor is responsible for executing tasks that provide
+the pools function. Looking at the code there is no synchronisation because the assumption is that everything is
+being executed on one thread.</p>
+
+<p>In some cases rather than block some tasks will defer execution and queue up in a deque or hand themselves to another
+task that they require the completion of. This task will then ensure the dependent task is executed at the appropriate time.</p>
+
+<p>The general ambition is to keep the executor service (decoupler) free of obstructions, while endeavouring to move the
+blocking tasks are out of the way until they need to modify structures within the pool.</p>
+
+<p>To execute a runnable on the Pools decoupler:</p>
+
+<div class="highlight highlight-java"><pre>  <span class="n">ncp</span><span class="o">.</span><span class="na">execute</span><span class="o">(</span><span class="k">new</span> <span class="n">Runnable</span><span class="o">(){</span>
+     <span class="kd">public</span> <span class="kt">void</span> <span class="nf">run</span><span class="o">(){</span> <span class="o">..</span> <span class="n">etc</span> <span class="o">..</span>  <span class="o">}</span>
+  <span class="o">});</span>
+</pre></div>
+
+<p>There is one exception to the concurrency model and that is the pool Listeners which use a CopyOnWriteArraySet. This was
+done because it is unlikely that there will be a lot of changes to pool listener list and some events are not fired from
+the decoupler.</p>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/R358">R358</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
