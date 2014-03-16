@@ -163,7 +163,7 @@ public class NettyConnectionPool
 
         fireLeaseRequested(time, units, userObject);
 
-        decoupler.execute(ol);
+        NettyConnectionPool.this.execute(ol);
 
         return future;
     }
@@ -176,7 +176,7 @@ public class NettyConnectionPool
         final ObtainLease ol = new ObtainLease(time, units, userObject);
 
         fireLeaseRequested(time, units, userObject);
-        decoupler.execute(ol);
+        NettyConnectionPool.this.execute(ol);
 
         try
         {
@@ -209,7 +209,7 @@ public class NettyConnectionPool
         }
 
 
-        decoupler.execute(new Runnable()
+        NettyConnectionPool.this.execute(new Runnable()
         {
             @Override
             public void run()
@@ -245,7 +245,7 @@ public class NettyConnectionPool
 
                     if (noNewLeases && leasedContexts.isEmpty())
                     {
-                        decoupler.execute(new ShutdownTask());
+                        NettyConnectionPool.this.execute(new ShutdownTask());
                     }
                     else
                     {
@@ -275,11 +275,11 @@ public class NettyConnectionPool
 
         for (int t = 0; t < immortalCount; t++)
         {
-            decoupler.execute(new OpenConnection(false, null, countDownLatch));
+            NettyConnectionPool.this.execute(new OpenConnection(false, null, countDownLatch));
         }
 
 
-        decoupler.execute(new Runnable()
+        NettyConnectionPool.this.execute(new Runnable()
         {
             @Override
             public void run()
@@ -301,7 +301,7 @@ public class NettyConnectionPool
     public void stop(final boolean force)
     {
 
-        decoupler.execute(new Runnable()
+        NettyConnectionPool.this.execute(new Runnable()
         {
             @Override
             public void run()
@@ -320,8 +320,13 @@ public class NettyConnectionPool
     }
 
     @Override
-    public void execute(Runnable runnable)
+    public synchronized void execute(Runnable runnable)
     {
+        if (decoupler.isShutdown() || decoupler.isTerminated())
+        {
+            return;
+        }
+
         decoupler.execute(runnable);
     }
 
@@ -380,14 +385,14 @@ public class NettyConnectionPool
 
                                 leasedContexts.remove(lc);
                                 leasedContextSet.remove(lc);
-                                decoupler.execute(new CloseContext(lc.getChannel()));
+                                NettyConnectionPool.this.execute(new CloseContext(lc.getChannel()));
 
                                 //
                                 // As we are closing an immortal connection we need to add a new one to replace it.
                                 //
                                 if (lc.isImmortal())
                                 {
-                                    decoupler.execute(new OpenConnection(false, null));
+                                    NettyConnectionPool.this.execute(new OpenConnection(false, null));
                                 }
 
                             }
@@ -544,7 +549,7 @@ public class NettyConnectionPool
                 ephemeralContexts.remove(context);
 
                 fireEphemeralReaped(context.getChannel());
-                decoupler.execute(new CloseContext(context.getChannel()));
+                NettyConnectionPool.this.execute(new CloseContext(context.getChannel()));
             }
         }
     }
@@ -598,7 +603,7 @@ public class NettyConnectionPool
                         //
                         // Put result back on the decoupler.
                         //
-                        decoupler.execute(new Runnable()
+                        NettyConnectionPool.this.execute(new Runnable()
                         {
                             @Override
                             public void run()
@@ -618,7 +623,7 @@ public class NettyConnectionPool
                                             throws Exception
                                         {
                                             super.channelWritabilityChanged(ctx);
-                                            decoupler.execute(new WritabilityChanged(ctx.channel()));
+                                            NettyConnectionPool.this.execute(new WritabilityChanged(ctx.channel()));
                                         }
 
                                         @Override
@@ -628,7 +633,7 @@ public class NettyConnectionPool
                                             super.exceptionCaught(ctx, cause);
                                             if (contextExceptionHandler.close(cause, NettyConnectionPool.this))
                                             {
-                                                decoupler.execute(new CloseContext(ctx.channel()));
+                                                NettyConnectionPool.this.execute(new CloseContext(ctx.channel()));
                                             }
                                         }
 
@@ -637,7 +642,7 @@ public class NettyConnectionPool
                                             throws Exception
                                         {
                                             super.channelInactive(ctx);
-                                            decoupler.execute(new ChannelInactive(ctx.channel()));
+                                            NettyConnectionPool.this.execute(new ChannelInactive(ctx.channel()));
                                         }
 
                                         @Override
@@ -835,7 +840,7 @@ public class NettyConnectionPool
                 if (ac.expired(System.currentTimeMillis()))
                 {
                     ac.getChannel().close();
-                    decoupler.execute(new CloseContext(ac.getChannel()));
+                    NettyConnectionPool.this.execute(new CloseContext(ac.getChannel()));
                 }
                 else
                 {
@@ -880,7 +885,7 @@ public class NettyConnectionPool
             {
                 OpenConnection oc = new OpenConnection(true, this);
                 connectionsInProgress.add(oc);
-                decoupler.execute(oc);
+                NettyConnectionPool.this.execute(oc);
                 return false; // At this point the
             }
 
@@ -895,7 +900,7 @@ public class NettyConnectionPool
                 //
                 // Schedule the immediate yielding of the channel of the canceled lease.
                 //
-                decoupler.execute(new Runnable()
+                NettyConnectionPool.this.execute(new Runnable()
                 {
                     @Override
                     public void run()
@@ -935,7 +940,7 @@ public class NettyConnectionPool
             return;
         }
 
-        decoupler.execute(leasesRequired.pollFirst());
+        NettyConnectionPool.this.execute(leasesRequired.pollFirst());
     }
 
 
@@ -962,7 +967,7 @@ public class NettyConnectionPool
 
             if (!channel.isActive() || !channel.isOpen() || channel.isWritable())
             {
-                decoupler.execute(new CloseContext(channel));
+                NettyConnectionPool.this.execute(new CloseContext(channel));
             }
         }
     }
@@ -1036,7 +1041,7 @@ public class NettyConnectionPool
         @Override
         public void run()
         {
-            decoupler.execute(new CloseContext(ctx));
+            NettyConnectionPool.this.execute(new CloseContext(ctx));
         }
     }
 
@@ -1125,7 +1130,7 @@ public class NettyConnectionPool
             }
 
 
-            decoupler.execute(new Runnable()
+            NettyConnectionPool.this.execute(new Runnable()
             {
                 @Override
                 public void run()
