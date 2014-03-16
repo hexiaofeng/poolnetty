@@ -254,7 +254,7 @@ BootStrapProvider and ConnectionInfoProvider need to be implemented, all others 
 <tr><td>ConnectionInfoProvider</td><td>Is called when making a connection to supply the local and remote addresses and
 a channel initializer.</td></tr>
 <tr><td>ContextExceptionHandler</td><td>Is called when a channel throws an exception, with the option of closing the channel.</td></tr>
-<tr><td>ExpiryReaper</td><td>Implementations of this are called to nominate expired leases for later processing.</td></tr>
+<tr><td>LeaseExpiryReaper</td><td>Implementations of this are called to nominate expired leases for later processing.</td></tr>
 
 <tr><td>LeaseExpiredHandler</td><td>Is called on each expired lease and provides the option of terminating the channel.</td></tr>
 
