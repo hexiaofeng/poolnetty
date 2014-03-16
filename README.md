@@ -5,11 +5,7 @@ Netty client connection pooling.
 
 State:
 ------
-16-Mar-2014:
-    Renamed packages to reflect Maven group prefix 'org.r358.'
-    Fixed Javadoc.
-    Created Release 0.1.0
-
+16-Mar-2014: Renamed packages to reflect Maven group prefix 'org.r358.' Fixed Javadoc. Created Release 0.1.0
 
 Building:
 ---------
