@@ -31,19 +31,43 @@
         <h1>
 <a name="pool-netty" class="anchor" href="#pool-netty"><span class="octicon octicon-link"></span></a>Pool Netty</h1>
 
-<p>Netty client connection pooling.</p>
+<p><a href="http://netty.io">Netty</a> client connection pooling.</p>
 
 <h2>
 <a name="state" class="anchor" href="#state"><span class="octicon octicon-link"></span></a>State:</h2>
 
-<p>08-Mar-2014 - Heading towards a release, just sorting out the mechanics with Sonatype re pushing to mvn central, (which is a first for me). The code is usable, just need to add more javadoc and get it pushed to central.</p>
+<p>16-Mar-2014: Renamed packages to reflect Maven group prefix 'org.r358.' Fixed Javadoc. Created Release 0.1.0</p>
+
+<h2>
+<a name="getting" class="anchor" href="#getting"><span class="octicon octicon-link"></span></a>Getting:</h2>
+
+<p>16-Mar-2014: This is in the throws of getting pushed into jcenter and the central maven repo.</p>
+
+<p>Hosted in <a href="https://bintray.com">Bintray:</a> at (<a href="https://bintray.com/r358org/poolnetty/org.r358.poolnetty/">https://bintray.com/r358org/poolnetty/org.r358.poolnetty/</a>)</p>
+
+<div class="highlight highlight-xml"><pre>
+    <span class="nt">&lt;dependency&gt;</span>
+    <span class="nt">&lt;groupId&gt;</span>org.r358.poolnetty<span class="nt">&lt;/groupId&gt;</span>
+    <span class="nt">&lt;artifactId&gt;</span>common<span class="nt">&lt;/artifactId&gt;</span>
+    <span class="nt">&lt;version&gt;</span>0.1.0.Final<span class="nt">&lt;/version&gt;</span>
+    <span class="nt">&lt;type&gt;</span>jar<span class="nt">&lt;/type&gt;</span>
+    <span class="nt">&lt;/dependency&gt;</span>
+
+    <span class="nt">&lt;dependency&gt;</span>
+    <span class="nt">&lt;groupId&gt;</span>org.r358.poolnetty<span class="nt">&lt;/groupId&gt;</span>
+    <span class="nt">&lt;artifactId&gt;</span>pool<span class="nt">&lt;/artifactId&gt;</span>
+    <span class="nt">&lt;version&gt;</span>0.1.0.Final<span class="nt">&lt;/version&gt;</span>
+    <span class="nt">&lt;type&gt;</span>jar<span class="nt">&lt;/type&gt;</span>
+    <span class="nt">&lt;/dependency&gt;</span>
+
+</pre></div>
 
 <h2>
 <a name="building" class="anchor" href="#building"><span class="octicon octicon-link"></span></a>Building:</h2>
 
 <p>Download and install <a href="http://www.gradle.org">Gradle</a></p>
 
-<p>To test and produce coverage report:</p>
+<p>To  and produce coverage report:</p>
 
 <pre><code>   gradle clean test coverage_report
 
@@ -51,21 +75,10 @@
 
 </code></pre>
 
-<p>To clean and package:</p>
-
-<pre><code> gradle clean compilejava jar
-
- # With archives in:
-
- &lt;root&gt;/pool/build/libs
- &lt;root&gt;/common/build/libs
-
-</code></pre>
-
 <h2>
-<a name="quick-start" class="anchor" href="#quick-start"><span class="octicon octicon-link"></span></a>Quick Start:</h2>
+<a name="using" class="anchor" href="#using"><span class="octicon octicon-link"></span></a>Using:</h2>
 
-<p>If your interested in testing it out then the following will help you.</p>
+<p>Use the following to get you started quickly.</p>
 
 <h3>
 <a name="basic-set-up" class="anchor" href="#basic-set-up"><span class="octicon octicon-link"></span></a>Basic set up.</h3>
@@ -188,10 +201,72 @@
  <span class="c1">// From instances of LeasedChannel</span>
  <span class="c1">//</span>
 
-
  <span class="n">chan</span><span class="o">.</span><span class="na">yield</span><span class="o">();</span>
 
 </pre></div>
+
+<h2>
+<a name="getting-notification" class="anchor" href="#getting-notification"><span class="octicon octicon-link"></span></a>Getting notification</h2>
+
+<h2>
+<a name="events-from-the-pool" class="anchor" href="#events-from-the-pool"><span class="octicon octicon-link"></span></a>Events from the pool</h2>
+
+<p>Implement PoolProviderListener directly or extend PoolProviderListenerAdapter to receive notification of events generate by the pool.</p>
+
+<p>For Example using the Adapter to keep code size down.</p>
+
+<div class="highlight highlight-java"><pre>  <span class="n">NettyConnectionPool</span> <span class="n">ncc</span> <span class="o">=</span>
+  <span class="n">ncp</span><span class="o">.</span><span class="na">addListener</span><span class="o">(</span><span class="k">new</span> <span class="n">PoolProviderListenerAdapter</span><span class="o">()</span>
+         <span class="o">{</span>
+
+             <span class="nd">@Override</span>
+             <span class="kd">public</span> <span class="kt">void</span> <span class="nf">connectionCreated</span><span class="o">(</span><span class="n">PoolProvider</span> <span class="n">provider</span><span class="o">,</span> <span class="n">Channel</span> <span class="n">channel</span><span class="o">,</span> <span class="kt">boolean</span> <span class="n">immortal</span><span class="o">)</span>
+             <span class="o">{</span>
+                 <span class="n">openedConnections</span><span class="o">.</span><span class="na">countDown</span><span class="o">();</span>
+             <span class="o">}</span>
+
+             <span class="nd">@Override</span>
+             <span class="kd">public</span> <span class="kt">void</span> <span class="nf">leaseGranted</span><span class="o">(</span><span class="n">PoolProvider</span> <span class="n">provider</span><span class="o">,</span> <span class="n">Channel</span> <span class="n">channel</span><span class="o">,</span> <span class="n">Object</span> <span class="n">userObject</span><span class="o">)</span>
+             <span class="o">{</span>
+                 <span class="n">leaseAll</span><span class="o">.</span><span class="na">countDown</span><span class="o">();</span>
+             <span class="o">}</span>
+
+             <span class="nd">@Override</span>
+             <span class="kd">public</span> <span class="kt">void</span> <span class="nf">leaseYield</span><span class="o">(</span><span class="n">PoolProvider</span> <span class="n">provider</span><span class="o">,</span> <span class="n">Channel</span> <span class="n">channel</span><span class="o">,</span> <span class="n">Object</span> <span class="n">userObject</span><span class="o">)</span>
+             <span class="o">{</span>
+                 <span class="n">yieldedConnections</span><span class="o">.</span><span class="na">countDown</span><span class="o">();</span>
+             <span class="o">}</span>
+
+             <span class="nd">@Override</span>
+             <span class="kd">public</span> <span class="kt">void</span> <span class="nf">connectionClosed</span><span class="o">(</span><span class="n">PoolProvider</span> <span class="n">provider</span><span class="o">,</span> <span class="n">Channel</span> <span class="n">channel</span><span class="o">)</span>
+             <span class="o">{</span>
+                 <span class="n">closedConnections</span><span class="o">.</span><span class="na">countDown</span><span class="o">();</span>
+             <span class="o">}</span>
+         <span class="o">});</span>
+
+</pre></div>
+
+<h2>
+<a name="events-from-the-leasedchannel" class="anchor" href="#events-from-the-leasedchannel"><span class="octicon octicon-link"></span></a>Events from the LeasedChannel</h2>
+
+<p>LeasedChannel transparently wraps the Netty Channel and adds a void yield() and onLeaseExpire() methods.
+Users can get direct notification of lease expiration by supplying a implementation of ValueEvent.</p>
+
+<p>For Example:</p>
+
+<div class="highlight highlight-java"><pre>     <span class="n">lchan</span><span class="o">.</span><span class="na">onLeaseExpire</span><span class="o">(</span><span class="k">new</span> <span class="n">ValueEvent</span><span class="o">&lt;</span><span class="n">Leasee</span><span class="o">&gt;()</span>
+            <span class="o">{</span>
+                <span class="nd">@Override</span>
+                <span class="kd">public</span> <span class="kt">void</span> <span class="nf">on</span><span class="o">(</span><span class="n">Leasee</span> <span class="n">value</span><span class="o">)</span>
+                <span class="o">{</span>
+                    <span class="c1">// Expired.</span>
+                <span class="o">}</span>
+            <span class="o">});</span>
+
+</pre></div>
+
+<p><em>Note:</em>
+Only a single ValueEvent can be used, this is not an accumulative list of listeners.</p>
 
 <h2>
 <a name="interfaces" class="anchor" href="#interfaces"><span class="octicon octicon-link"></span></a>Interfaces</h2>
@@ -199,7 +274,7 @@
 <p>As Netty is so configurable, poolnetty provides a lot of options for configuration and customisation of the pools
 function.</p>
 
-<p><strong>Note:</strong>
+<p><em>Note:</em>
 BootStrapProvider and ConnectionInfoProvider need to be implemented, all others have default implementations.</p>
 
 <table>
@@ -221,7 +296,7 @@ a channel initializer.</td>
 <td>Is called when a channel throws an exception, with the option of closing the channel.</td>
 </tr>
 <tr>
-<td>ExpiryReaper</td>
+<td>LeaseExpiryReaper</td>
 <td>Implementations of this are called to nominate expired leases for later processing.</td>
 </tr>
 <tr>
