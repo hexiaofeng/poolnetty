@@ -407,7 +407,7 @@ public class LeaseExpirationTest
         lchan.yield();
 
         //
-        // Test we got the exception and org.r358.poolnetty.test we got the correct message.
+        // Test we got the exception and test we got the correct message.
         //
         TestCase.assertTrue(gotExceptionWhenTryingToYield.await(4, TimeUnit.SECONDS));
         TestCase.assertEquals("Unknown channel, has the lease expired?", yieldException.get().getMessage());

@@ -58,7 +58,7 @@ public class LifecycleTest
      * <l1>Await the return of all leased connections.</l1>
      * <li>Blocks the leasing of connections.</li>
      * <p/>
-     * <p>Also org.r358.poolnetty.test that leases are not granted during this time.</p>
+     * <p>Also test that leases are not granted during this time.</p>
      * </ul>
      *
      * @throws Exception

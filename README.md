@@ -7,31 +7,51 @@ State:
 ------
 16-Mar-2014: Renamed packages to reflect Maven group prefix 'org.r358.' Fixed Javadoc. Created Release 0.1.0
 
+
+Getting:
+--------
+
+16-Mar-2014: This is in the throws of getting pushed into jcenter and the central maven repo.
+
+Hosted in [Bintray:|https://bintray.com] at [https://bintray.com/r358org/poolnetty/org.r358.poolnetty/]
+
+```xml
+
+    <dependency>
+    <groupId>org.r358.poolnetty</groupId>
+    <artifactId>common</artifactId>
+    <version>0.1.0.Final</version>
+    <type>jar</type>
+    </dependency>
+
+    <dependency>
+    <groupId>org.r358.poolnetty</groupId>
+    <artifactId>pool</artifactId>
+    <version>0.1.0.Final</version>
+    <type>jar</type>
+    </dependency>
+
+```
+
+
+
 Building:
 ---------
 
 Download and install [Gradle](http://www.gradle.org)
 
 
-To org.r358.poolnetty.test and produce coverage report:
+To  and produce coverage report:
 
 ```
-   gradle clean org.r358.poolnetty.test coverage_report
+   gradle clean test coverage_report
 
    # Build will print absolute path to coverage report, open it in your browser.
 
 ```
 
 
-To clean and package:
-
-```
-  gradle clean org.r358.poolnetty.test sourcesJar javadocJar install
-
-
-```
-
-## Quick Start:
+## Using:
 Use the following to get you started quickly.
 
 ### Basic set up.

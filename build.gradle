@@ -178,7 +178,7 @@ project(':pool') {
 }
 
 
-task coverage_report(dependsOn: 'org.r358.poolnetty.test') << {
+task coverage_report(dependsOn: 'test') << {
 
     //
     // Get jacoco jar.
