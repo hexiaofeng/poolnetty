@@ -294,3 +294,5 @@ To execute a runnable on the Pools decoupler:
 There is one exception to the concurrency model and that is the pool Listeners which use a CopyOnWriteArraySet. This was
 done because it is unlikely that there will be a lot of changes to pool listener list and some events are not fired from
 the decoupler.
+
+Copyright &copy; 2014 R358 All Rights Reserved
