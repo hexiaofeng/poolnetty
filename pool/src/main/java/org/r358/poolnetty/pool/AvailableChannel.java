@@ -27,18 +27,18 @@ import java.util.concurrent.ScheduledFuture;
  * A wrapper for the context.
  * Not thread safe.
  */
-public class AvailableContext
+public class AvailableChannel
 {
     private final long closeAfter;
-    private final Channel channelHandlerContext;
+    private final Channel channel;
     private final int lifespan;
     private final boolean immortal;
     private final ScheduledFuture reaper;
 
-    public AvailableContext(long closeAfter, Channel channelHandlerContext, int lifespan, boolean immortal, ScheduledFuture reaper)
+    public AvailableChannel(long closeAfter, Channel channel, int lifespan, boolean immortal, ScheduledFuture reaper)
     {
         this.closeAfter = closeAfter;
-        this.channelHandlerContext = channelHandlerContext;
+        this.channel = channel;
         this.lifespan = lifespan;
         this.immortal = immortal;
         this.reaper = reaper;
@@ -46,7 +46,7 @@ public class AvailableContext
 
     public Channel getChannel()
     {
-        return channelHandlerContext;
+        return channel;
     }
 
 

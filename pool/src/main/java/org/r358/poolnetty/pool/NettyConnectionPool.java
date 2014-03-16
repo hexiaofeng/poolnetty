@@ -19,19 +19,26 @@
 
 package org.r358.poolnetty.pool;
 
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.*;
 import org.r358.poolnetty.common.*;
 import org.r358.poolnetty.common.exceptions.PoolProviderException;
 import org.r358.poolnetty.pool.concurrent.DecoupledCompletion;
 import org.r358.poolnetty.pool.concurrent.DeferrableTask;
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.*;
 
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- *
+ * Netty Connection Pool.
+ * <p>Notes about threading:</p>
+ * <p>
+ * <ol>
+ * <li>Uses single threaded executor and all operations on fields in this class are done on that executor.</li>
+ * <li>The addition and removal of listeners exists outside the executor and uses a CopyOnWriteArraySet.</li>
+ * </ol>
+ * </p>
  */
 public class NettyConnectionPool
     implements PoolProvider
@@ -59,11 +66,23 @@ public class NettyConnectionPool
     protected final int reaperIntervalMillis;
 
 
+    /**
+     * Maps the channel to is current carrier.
+     */
     protected final Map<Channel, Object> contextToCarrier = new HashMap<>();
 
+    /**
+     * List of leased contexts.
+     */
     protected final List<LeasedContext> leasedContexts = new ArrayList<>();
+    /**
+     * Set of leased contexts (fasting searching in yield operation).
+     */
     protected final Set<LeasedContext> leasedContextSet = new HashSet<>();
 
+    /**
+     * Listeners.
+     */
     protected final CopyOnWriteArraySet<PoolProviderListener> listeners = new CopyOnWriteArraySet<>();
 
     /**
@@ -74,24 +93,27 @@ public class NettyConnectionPool
     /**
      * List of contexts that are immortal and do not age out.
      */
-    protected final List<AvailableContext> immortalContexts = new ArrayList<>();
+    protected final List<AvailableChannel> immortalContexts = new ArrayList<>();
 
     /**
      * List of contexts that are ephemeral.
      */
-    protected final List<AvailableContext> ephemeralContexts = new ArrayList<>();
+    protected final List<AvailableChannel> ephemeralContexts = new ArrayList<>();
 
     /**
-     * List of opening connections.
+     * List of connections that are still being opened and created.
      */
     protected final List<OpenConnection> connectionsInProgress = new ArrayList<>();
 
 
+    /**
+     * Stop leases from being granted.
+     */
     protected boolean noNewLeases = false;
-    protected CountDownLatch stopLatch = null;
 
-    protected long runReaperAfterTime = 0;
-
+    /**
+     * Lease counter, used to give unique id to LeaseChannels. (See note on threading.)
+     */
     protected long leaseIdCounter = 0;
 
 
@@ -202,18 +224,18 @@ public class NettyConnectionPool
                     leasedContextSet.remove(carrier);
                     leasedContexts.remove(carrier);
 
-                    AvailableContext ac = null;
+                    AvailableChannel ac = null;
 
                     if (((LeasedContext)carrier).isImmortal())
                     {
-                        ac = new AvailableContext(-1, ((LeasedContext)carrier).getChannel(), -1, true, null);
+                        ac = new AvailableChannel(-1, ((LeasedContext)carrier).getChannel(), -1, true, null);
                         immortalContexts.add(ac);
                     }
                     else
                     {
                         int lifespan = ((LeasedContext)carrier).getChannelLifespan();
                         EphemeralReaper reaper = new EphemeralReaper(lifespan);
-                        ac = new AvailableContext(System.currentTimeMillis() + lifespan, ((LeasedContext)carrier).getChannel(), lifespan, false, decoupler.schedule(reaper, lifespan, TimeUnit.MILLISECONDS));
+                        ac = new AvailableChannel(System.currentTimeMillis() + lifespan, ((LeasedContext)carrier).getChannel(), lifespan, false, decoupler.schedule(reaper, lifespan, TimeUnit.MILLISECONDS));
                         reaper.context = ac;
 
                         ephemeralContexts.add(ac);
@@ -232,7 +254,7 @@ public class NettyConnectionPool
 
                     fireLeaseYield(NettyConnectionPool.this, channel, ((LeasedContext)carrier).getUserObject());
                 }
-                else if (carrier instanceof AvailableContext)
+                else if (carrier instanceof AvailableChannel)
                 {
                     poolExceptionHandler.handleException(new PoolProviderException("Context is not out on lease."));
                 }
@@ -357,7 +379,7 @@ public class NettyConnectionPool
                                 //
 
                                 leasedContexts.remove(lc);
-                                leasedContexts.remove(lc);
+                                leasedContextSet.remove(lc);
                                 decoupler.execute(new CloseContext(lc.getChannel()));
 
                                 //
@@ -387,9 +409,9 @@ public class NettyConnectionPool
      * Apply pre-lease to a list of free contexts and grab the first one that passes.
      *
      * @param contextList The list of AvailableContexts.
-     * @return An AvailableContext object or null if none were found.
+     * @return An AvailableChannel object or null if none were found.
      */
-    private AvailableContext applyPreLease(List<AvailableContext> contextList, Object userObject)
+    private AvailableChannel applyPreLease(List<AvailableChannel> contextList, Object userObject)
     {
 
         if (!contextList.isEmpty())
@@ -398,7 +420,7 @@ public class NettyConnectionPool
 
             while (--c >= 0)
             {
-                AvailableContext ac = contextList.remove(0);
+                AvailableChannel ac = contextList.remove(0);
                 if (preGrantLease.continueToGrantLease(ac.getChannel(), NettyConnectionPool.this, userObject))
                 {
                     return ac;
@@ -498,13 +520,16 @@ public class NettyConnectionPool
     }
 
 
+    /**
+     * Traverse the list of ephemeral channels and reap any that have expired.
+     */
     private class EphemeralReaper
         implements Runnable
     {
 
         private final int lifespan;
 
-        private AvailableContext context;
+        private AvailableChannel context;
 
         private EphemeralReaper(int lifespan)
         {
@@ -637,11 +662,11 @@ public class NettyConnectionPool
                                         protected void onComplete()
                                         {
 
-                                            AvailableContext ac = null;
+                                            AvailableChannel ac = null;
                                             if (ephemeral)
                                             {
                                                 EphemeralReaper reaper = new EphemeralReaper(ephemeralLifespanMillis);
-                                                ac = new AvailableContext(
+                                                ac = new AvailableChannel(
                                                     System.currentTimeMillis() + ephemeralLifespanMillis,
                                                     ctc,
                                                     ephemeralLifespanMillis,
@@ -655,7 +680,7 @@ public class NettyConnectionPool
                                             }
                                             else
                                             {
-                                                ac = new AvailableContext(-1, ctc, -1, false, null);
+                                                ac = new AvailableChannel(-1, ctc, -1, false, null);
 
                                                 immortalContexts.add(ac);
                                                 fireConnectionCreated(ctc, false);
@@ -787,7 +812,7 @@ public class NettyConnectionPool
             // Can we satisfy this immediately
             //
 
-            AvailableContext ac = applyPreLease(immortalContexts, userObject);   // From immortals.
+            AvailableChannel ac = applyPreLease(immortalContexts, userObject);   // From immortals.
 
             if (ac == null)
             {
@@ -849,7 +874,7 @@ public class NettyConnectionPool
             }
 
             //
-            // Can we add another connection.
+            // Can we request creation of another another connection.
             //
             if (ephemeralContexts.size() < maxEphemeralCount - connectionsInProgress.size())
             {
@@ -961,7 +986,7 @@ public class NettyConnectionPool
         public void run()
         {
             Object o = contextToCarrier.remove(ctx);
-            if (o instanceof AvailableContext)
+            if (o instanceof AvailableChannel)
             {
                 immortalContexts.remove(o);
                 ephemeralContexts.remove(o);
@@ -1027,7 +1052,7 @@ public class NettyConnectionPool
                 lc.getChannel().close();
             }
 
-            for (AvailableContext ac : immortalContexts)
+            for (AvailableChannel ac : immortalContexts)
             {
 
                 try
@@ -1041,7 +1066,7 @@ public class NettyConnectionPool
                 }
             }
 
-            for (AvailableContext ac : ephemeralContexts)
+            for (AvailableChannel ac : ephemeralContexts)
             {
 
                 try

@@ -24,17 +24,32 @@ import io.netty.channel.ChannelInitializer;
 import java.net.SocketAddress;
 
 /**
- *
+ * Defines the connection.
  */
 public class ConnectionInfo
 {
+    /**
+     * Netty channel initializer instance.
+     */
     private final ChannelInitializer channelInitializer;
-
-
+    /**
+     * The remote address.
+     */
     private final SocketAddress remoteSocketAddress;
+
+    /**
+     * The Local address, can be null.
+     */
     private final SocketAddress localSocketAddress;
 
 
+    /**
+     * Create connection info.
+     *
+     * @param remoteSocketAddress The remote address, where you want to connect to.
+     * @param localSocketAddress  Local address or null.
+     * @param channelInitializer  The channel netty channel initializer.
+     */
     public ConnectionInfo(SocketAddress remoteSocketAddress, SocketAddress localSocketAddress, ChannelInitializer channelInitializer)
     {
         this.channelInitializer = channelInitializer;
@@ -42,15 +57,31 @@ public class ConnectionInfo
         this.localSocketAddress = localSocketAddress;
     }
 
+    /**
+     * Return the channel initializer.
+     *
+     * @return The channel initializer.
+     */
     public ChannelInitializer getChannelInitializer()
     {
         return channelInitializer;
     }
 
+    /**
+     * Return the remote address.
+     *
+     * @return The remote address.
+     */
     public SocketAddress getRemoteSocketAddress()
     {
         return remoteSocketAddress;
     }
+
+    /**
+     * Return the local address.
+     *
+     * @return The local address.
+     */
 
     public SocketAddress getLocalSocketAddress()
     {

@@ -26,7 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Very simple reaper that considers the whole lease list in one pass.
+ * Very simple reaper that considers the whole lease list in one pass, this won't scale well.
  */
 public class FullPassSimpleLeaseReaper
     implements LeaseExpiryReaper

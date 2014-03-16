@@ -28,7 +28,7 @@ public interface BootstrapProvider
 {
 
     /**
-     * Create a new bootstap, use this to configure the bootstrap, how you want it.
+     * Create a new bootstrap, use this to configure the bootstrap, how you want it.
      *
      * @param poolProvider The pool provider.
      * @return The bootstrap.

@@ -24,7 +24,7 @@ import io.netty.channel.Channel;
 import java.util.concurrent.TimeUnit;
 
 /**
- *
+ * Adapter for the PoolProviderListener.
  */
 public class PoolProviderListenerAdapter implements PoolProviderListener
 {

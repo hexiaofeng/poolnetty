@@ -20,7 +20,7 @@
 package org.r358.poolnetty.common;
 
 /**
- *
+ * Implementations of this class are passed exceptions from within the pool.
  */
 public interface PoolExceptionHandler
 {

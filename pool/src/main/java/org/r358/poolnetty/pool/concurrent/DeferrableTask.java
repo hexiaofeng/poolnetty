@@ -26,6 +26,8 @@ import java.util.concurrent.TimeoutException;
 
 /**
  * A Task that can reschedule its execution.
+ * Used primarily in lease granting where the defer() implementation puts the
+ * lease request back into a holding deque.
  */
 public abstract class DeferrableTask<V> implements Runnable
 {

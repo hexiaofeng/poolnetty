@@ -19,29 +19,47 @@
 
 package org.r358.poolnetty.common;
 
-import org.r358.poolnetty.common.concurrent.ValueEvent;
-import org.r358.poolnetty.common.exceptions.PoolProviderException;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.*;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
+import org.r358.poolnetty.common.concurrent.ValueEvent;
+import org.r358.poolnetty.common.exceptions.PoolProviderException;
 
 import java.net.SocketAddress;
 
 /**
- *
+ * A wrapper around a netty channel.
  */
 public class LeasedChannel
     implements Channel,
     Leasee
 {
+    /**
+     * Inner channel.
+     */
     private final Channel inner;
+    /**
+     * Pool provider.
+     */
     private final PoolProvider poolProvider;
+
+    /**
+     * The user object.
+     */
     private final Object userObject;
+
+    /**
+     * Lease expiration callback.
+     */
     private ValueEvent<Leasee> leaseExpirationCallback;
+
+    /**
+     * The owning context.
+     */
     private final LeasedContext owningContext;
 
-    public LeasedChannel(LeasedContext owningContext,  Channel inner, PoolProvider provider, Object userObject)
+    public LeasedChannel(LeasedContext owningContext, Channel inner, PoolProvider provider, Object userObject)
     {
         this.owningContext = owningContext;
         this.inner = inner;
@@ -323,6 +341,9 @@ public class LeasedChannel
         return userObject;
     }
 
+    /**
+     * Calling this will cause your lease expiration value event to be called.
+     */
     public void fireExpired()
     {
         if (leaseExpirationCallback != null)

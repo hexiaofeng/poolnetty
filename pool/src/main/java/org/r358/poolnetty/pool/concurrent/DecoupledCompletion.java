@@ -24,13 +24,18 @@ import org.r358.poolnetty.common.concurrent.Completion;
 import java.util.concurrent.Executor;
 
 /**
- *
+ * A decoupled completion, extend this to have onComplete() called on the executor of your choice.
  */
 public abstract class DecoupledCompletion implements Completion
 {
 
     private final Executor decoupler;
 
+    /**
+     * Create defining the executor.
+     *
+     * @param decoupler
+     */
     protected DecoupledCompletion(Executor decoupler)
     {
 

@@ -19,8 +19,8 @@
 
 package org.r358.poolnetty.common;
 
-import org.r358.poolnetty.common.exceptions.PoolProviderException;
 import io.netty.channel.Channel;
+import org.r358.poolnetty.common.exceptions.PoolProviderException;
 
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -39,7 +39,6 @@ public interface PoolProvider
 
     /**
      * Request a lease.
-     *
      *
      * @param time       The lease time.
      * @param units      Time unists.
@@ -67,13 +66,27 @@ public interface PoolProvider
         throws PoolProviderException;
 
 
+    /**
+     * Start the pool.
+     *
+     * @param timeToWait Time to wait.
+     * @param timeUnit   Time units.
+     * @return True if all immortal connections are made in the timeToWait time.
+     * @throws Exception rethrows all exceptions.
+     */
     boolean start(long timeToWait, TimeUnit timeUnit)
         throws Exception;
 
+    /**
+     * Stop the pool. When force == false the pool will only stop when all channels are yielded,
+     * when force is true the connections are closed ungracefully and the pool stops.
+     *
+     * @param force when true caused the pool to shutdown immediately.
+     */
     void stop(boolean force);
 
     /**
-     * execute the runnable on the pools decoupler thread.
+     * Execute the runnable on the pools decoupler thread.
      *
      * @param runnable The runnable.
      */

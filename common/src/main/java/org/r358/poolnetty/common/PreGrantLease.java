@@ -31,9 +31,9 @@ public interface PreGrantLease
     /**
      * Continue to grant lease (true)
      *
-     * @param context  The context to be leased.
+     * @param channel  The channel to be leased.
      * @param provider The provider of the lease.
      * @return true to grant the lease, false to deny the lease.
      */
-    boolean continueToGrantLease(Channel context, PoolProvider provider, Object userObject);
+    boolean continueToGrantLease(Channel channel, PoolProvider provider, Object userObject);
 }

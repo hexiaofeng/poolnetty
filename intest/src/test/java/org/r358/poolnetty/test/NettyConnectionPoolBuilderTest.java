@@ -108,7 +108,7 @@ public class NettyConnectionPoolBuilderTest
         PreGrantLease pgl = new PreGrantLease()
         {
             @Override
-            public boolean continueToGrantLease(Channel context, PoolProvider provider, Object userObject)
+            public boolean continueToGrantLease(Channel channel, PoolProvider provider, Object userObject)
             {
                 return false;
             }

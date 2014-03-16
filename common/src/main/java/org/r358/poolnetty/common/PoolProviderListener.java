@@ -32,14 +32,14 @@ public interface PoolProviderListener
     /**
      * Called when pool has finished starting, after immortal connections are created.
      *
-     * @param provider
+     * @param provider The provider.
      */
     void started(PoolProvider provider);
 
     /**
      * Called after all connections are closed.
      *
-     * @param provider
+     * @param provider The provider.
      */
     void stopped(PoolProvider provider);
 
@@ -49,7 +49,7 @@ public interface PoolProviderListener
      * @param provider   The Provider.
      * @param leaseTime  The time of the lease.
      * @param units      The units.
-     * @param userObject
+     * @param userObject The userobject accompanying the lease request.
      */
     void leaseRequested(PoolProvider provider, int leaseTime, TimeUnit units, Object userObject);
 
@@ -58,11 +58,17 @@ public interface PoolProviderListener
      *
      * @param provider   The provider.
      * @param channel    The channel.
-     * @param userObject
+     * @param userObject The userobject accompanying the lease request.
      */
     void leaseGranted(PoolProvider provider, Channel channel, Object userObject);
 
 
+    /**
+     * Called the the lease is canceled.
+     *
+     * @param provider   The provider.
+     * @param userObject The userobject accompanying the lease request.
+     */
     void leaseCanceled(PoolProvider provider, Object userObject);
 
 
@@ -71,7 +77,7 @@ public interface PoolProviderListener
      *
      * @param provider   The provider.
      * @param channel    The channel.
-     * @param userObject
+     * @param userObject The userobject accompanying the lease request.
      */
     void leaseYield(PoolProvider provider, Channel channel, Object userObject);
 
@@ -80,7 +86,7 @@ public interface PoolProviderListener
      *
      * @param provider   The provider.
      * @param channel    The channel.
-     * @param userObject
+     * @param userObject The userobject accompanying the lease request.
      */
     void leaseExpired(PoolProvider provider, Channel channel, Object userObject);
 

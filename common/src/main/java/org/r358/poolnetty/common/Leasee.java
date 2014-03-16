@@ -23,7 +23,7 @@ import org.r358.poolnetty.common.concurrent.ValueEvent;
 import org.r358.poolnetty.common.exceptions.PoolProviderException;
 
 /**
- *
+ * Channels leased from the pool are wrapped in a object implementing this interface.
  */
 public interface Leasee
 {
@@ -38,7 +38,7 @@ public interface Leasee
     /**
      * Run when the lease expires.
      *
-     * @param task The task.
+     * @param callThis The task.
      */
     void onLeaseExpire(ValueEvent<Leasee> callThis);
 }

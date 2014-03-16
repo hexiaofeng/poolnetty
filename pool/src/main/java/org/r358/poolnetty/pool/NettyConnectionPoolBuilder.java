@@ -19,15 +19,19 @@
 
 package org.r358.poolnetty.pool;
 
+import io.netty.channel.Channel;
 import org.r358.poolnetty.common.*;
 import org.r358.poolnetty.common.concurrent.Completion;
-import io.netty.channel.Channel;
 
 /**
- * Builds the connection pool.
- * <p>
- * //TODO Example.
- * </p>
+ * A connection pool builder.
+ * The connection pool is final and this class build it. (listeners can be added an removed at will).
+ * <p/>
+ * <p>At the very lease you need to provide:</p>
+ * <ol>
+ * <li>ConnectionInfoProvider</li>
+ * <li>BootstrapProvider</li>
+ * </ol>
  */
 public class NettyConnectionPoolBuilder
 {
@@ -54,6 +58,14 @@ public class NettyConnectionPoolBuilder
 
     }
 
+    /**
+     * Create defining the immortal count, the maximum ephemeral count an the idle lifespan (milliseconds)
+     * or each ephemeral connection.
+     *
+     * @param immortalCount           The number of immortal connections.
+     * @param maxEphemeralCount       The maximum ephemeral count.
+     * @param ephemeralLifespanMillis The idle lifespan in milliseconds of each ephemeral connection.
+     */
     public NettyConnectionPoolBuilder(int immortalCount, int maxEphemeralCount, int ephemeralLifespanMillis)
     {
         this.immortalCount = immortalCount;
@@ -198,7 +210,7 @@ public class NettyConnectionPoolBuilder
             preGrantLease = new PreGrantLease()
             {
                 @Override
-                public boolean continueToGrantLease(Channel context, PoolProvider provider, Object userObject)
+                public boolean continueToGrantLease(Channel channel, PoolProvider provider, Object userObject)
                 {
                     return true;
                 }

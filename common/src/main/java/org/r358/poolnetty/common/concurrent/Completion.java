@@ -20,9 +20,12 @@
 package org.r358.poolnetty.common.concurrent;
 
 /**
- *
+ * Signal completion, implementations of this are called from alien threads not under the control of the issuer.
  */
 public interface Completion
 {
+    /**
+     * Signal completion.
+     */
     void complete();
 }
