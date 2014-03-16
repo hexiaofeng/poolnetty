@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 
 /**
- * Function Observation test to ensure all the events occur in the correct order.
+ * Function Observation org.r358.poolnetty.test to ensure all the events occur in the correct order.
  * Using single connection.
  */
 @RunWith(JUnit4.class)
@@ -35,7 +35,7 @@ public class ConnectionEstablishPhaseTest
 
     /**
      * Test establishment of single connection lease, send message, receive message, yield lease, close connection pool.
-     * End to end test with no introduced errors.
+     * End to end org.r358.poolnetty.test with no introduced errors.
      *
      * @throws Exception
      */

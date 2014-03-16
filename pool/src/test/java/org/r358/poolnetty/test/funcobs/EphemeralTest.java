@@ -64,7 +64,7 @@ public class EphemeralTest
     }
 
     /**
-     * In this test an ephemeral connection is made as a result of a lease request.
+     * In this org.r358.poolnetty.test an ephemeral connection is made as a result of a lease request.
      * Messages are exchanged and the channel is reaped and closed after yielding and has sat idle.
      *
      * @throws Exception

@@ -5,7 +5,10 @@ Netty client connection pooling.
 
 State:
 ------
-08-Mar-2014 - Heading towards a release, just sorting out the mechanics with Sonatype re pushing to mvn central, (which is a first for me). The code is usable, just need to add more javadoc and get it pushed to central.
+16-Mar-2014:
+    Renamed packages to reflect Maven group prefix 'org.r358.'
+    Fixed Javadoc.
+    Created Release 0.1.0
 
 
 Building:
@@ -13,10 +16,11 @@ Building:
 
 Download and install [Gradle](http://www.gradle.org)
 
-To test and produce coverage report:
+
+To org.r358.poolnetty.test and produce coverage report:
 
 ```
-   gradle clean test coverage_report
+   gradle clean org.r358.poolnetty.test coverage_report
 
    # Build will print absolute path to coverage report, open it in your browser.
 
@@ -26,17 +30,13 @@ To test and produce coverage report:
 To clean and package:
 
 ```
- gradle clean compilejava jar
+  gradle clean org.r358.poolnetty.test sourcesJar javadocJar install
 
- # With archives in:
-
- <root>/pool/build/libs
- <root>/common/build/libs
 
 ```
 
 ## Quick Start:
-If your interested in testing it out then the following will help you.
+Use the following to get you started quickly.
 
 ### Basic set up.
 
@@ -157,16 +157,78 @@ Yielding a lease means giving it back to the pool.
  // From instances of LeasedChannel
  //
 
-
  chan.yield();
 
 ```
+
+## Getting notification
+
+## Events from the pool
+Implement PoolProviderListener directly or extend PoolProviderListenerAdapter to receive notification of events generate by the pool.
+
+For Example using the Adapter to keep code size down.
+
+```java
+  NettyConnectionPool ncc =
+  ncp.addListener(new PoolProviderListenerAdapter()
+         {
+
+             @Override
+             public void connectionCreated(PoolProvider provider, Channel channel, boolean immortal)
+             {
+                 openedConnections.countDown();
+             }
+
+             @Override
+             public void leaseGranted(PoolProvider provider, Channel channel, Object userObject)
+             {
+                 leaseAll.countDown();
+             }
+
+             @Override
+             public void leaseYield(PoolProvider provider, Channel channel, Object userObject)
+             {
+                 yieldedConnections.countDown();
+             }
+
+             @Override
+             public void connectionClosed(PoolProvider provider, Channel channel)
+             {
+                 closedConnections.countDown();
+             }
+         });
+
+```
+
+## Events from the LeasedChannel
+
+LeasedChannel transparently wraps the Netty Channel and adds a void yield() and onLeaseExpire() methods.
+Users can get direct notification of lease expiration by supplying a implementation of ValueEvent<Leasee>.
+
+For Example:
+
+```java
+     lchan.onLeaseExpire(new ValueEvent<Leasee>()
+            {
+                @Override
+                public void on(Leasee value)
+                {
+                    // Expired.
+                }
+            });
+
+```
+
+*Note:*
+Only a single ValueEvent<Lease> can be used, this is not an accumulative list of listeners.
+
+
 
 ## Interfaces
 As Netty is so configurable, poolnetty provides a lot of options for configuration and customisation of the pools
 function.
 
-**Note:**
+*Note:*
 BootStrapProvider and ConnectionInfoProvider need to be implemented, all others have default implementations.
 
 
