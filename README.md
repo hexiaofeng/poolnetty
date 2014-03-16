@@ -11,9 +11,7 @@ State:
 Getting:
 --------
 
-16-Mar-2014: This is in the throws of getting pushed into jcenter and the central maven repo.
-
-Hosted in [Bintray:](https://bintray.com) at (https://bintray.com/r358org/poolnetty/org.r358.poolnetty/)
+Hosted in [Bintray JCenter:](https://bintray.com/bintray/jcenter)
 
 ```xml
 
