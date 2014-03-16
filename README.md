@@ -41,7 +41,7 @@ Building:
 Download and install [Gradle](http://www.gradle.org)
 
 
-To  and produce coverage report:
+To build and produce coverage report:
 
 ```
    gradle clean test coverage_report
